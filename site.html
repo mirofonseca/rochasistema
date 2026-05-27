@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Rocha Reboques – Venda e Aluguel em Pelotas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@400;500;600;700;900&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange:       #F76C0C;
+      --orange-light: #FF8C38;
+      --orange-dark:  #C4540A;
+      --blue:         #0A2647;
+      --blue-mid:     #144272;
+      --blue-light:   #205295;
+      --white:        #FFFFFF;
+      --gray-light:   #F4F6F8;
+      --gray:         #8A9BB0;
+      --text:         #1A2535;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--blue);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 5%; height: 70px;
+      border-bottom: 3px solid var(--orange);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    }
+    .nav-logo { display: flex; align-items: center; gap: 14px; text-decoration: none; }
+    .nav-logo-icon {
+      width: 40px; height: 40px; background: var(--orange);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .nav-logo-icon svg { width: 22px; height: 22px; stroke: white; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-logo-text .brand { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--white); letter-spacing: 2px; display: block; line-height: 1.1; }
+    .nav-logo-text .sub   { font-size: 10px; color: var(--orange); letter-spacing: 3px; text-transform: uppercase; font-weight: 600; }
+
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a {
+      color: var(--gray); text-decoration: none;
+      font-size: 13px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+      transition: color .2s; position: relative;
+    }
+    .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; right: 0; height: 2px; background: var(--orange); transform: scaleX(0); transition: transform .25s; }
+    .nav-links a:hover { color: var(--white); }
+    .nav-links a:hover::after { transform: scaleX(1); }
+
+    .nav-cta {
+      background: var(--orange); color: var(--white);
+      padding: 10px 22px; font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      transition: background .2s, transform .15s; white-space: nowrap;
+    }
+    .nav-cta:hover { background: var(--orange-light); transform: translateY(-1px); }
+    .nav-cta svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+    .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+    .hamburger span { display: block; width: 24px; height: 2px; background: var(--white); border-radius: 2px; transition: .3s; }
+
+    /* ─── HERO ─── */
+    #hero {
+      position: relative; min-height: 100vh; background: var(--blue);
+      display: flex; align-items: center; overflow: hidden; padding-top: 70px;
+    }
+    .hero-bg-pattern {
+      position: absolute; inset: 0;
+      background-image: repeating-linear-gradient(-45deg, transparent 0px, transparent 38px, rgba(255,255,255,0.025) 38px, rgba(255,255,255,0.025) 40px);
+      pointer-events: none;
+    }
+    .hero-orange-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: linear-gradient(to bottom, var(--orange), var(--orange-dark)); }
+    .hero-diagonal { position: absolute; right: 0; top: 0; bottom: 0; width: 45%; background: var(--blue-mid); clip-path: polygon(20% 0, 100% 0, 100% 100%, 0% 100%); }
+    .hero-diagonal-accent { position: absolute; right: 0; top: 0; bottom: 0; width: 42%; background: rgba(247,108,12,0.07); clip-path: polygon(22% 0, 100% 0, 100% 100%, 2% 100%); }
+
+    .hero-content { position: relative; z-index: 2; padding: 0 5%; max-width: 700px; animation: fadeUp .8s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(247,108,12,0.15); border: 1px solid rgba(247,108,12,0.4);
+      color: var(--orange-light); padding: 6px 14px;
+      font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 28px;
+    }
+    .hero-badge-dot { width: 7px; height: 7px; background: var(--orange); border-radius: 50%; animation: pulse 2s infinite; flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+    .hero-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(62px,9vw,110px); line-height: .92; color: var(--white); letter-spacing: 2px; margin-bottom: 12px; }
+    .hero-title span { color: var(--orange); }
+    .hero-sub { font-family: 'Barlow Condensed', sans-serif; font-size: clamp(18px,2.5vw,26px); color: var(--gray); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 28px; }
+    .hero-desc { font-size: 16px; color: rgba(255,255,255,0.65); line-height: 1.7; max-width: 480px; margin-bottom: 40px; }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+
+    .btn-primary {
+      background: var(--orange); color: var(--white); padding: 16px 34px;
+      font-weight: 700; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 10px;
+      transition: background .2s, transform .15s, box-shadow .2s;
+      box-shadow: 0 8px 24px rgba(247,108,12,.35);
+    }
+    .btn-primary:hover { background: var(--orange-light); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(247,108,12,.45); }
+    .btn-primary svg { width: 18px; height: 18px; stroke: white; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+    .btn-outline {
+      border: 2px solid rgba(255,255,255,0.25); color: var(--white); padding: 14px 28px;
+      font-weight: 600; font-size: 14px; letter-spacing: 1px; text-transform: uppercase;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      transition: border-color .2s, background .2s;
+    }
+    .btn-outline:hover { border-color: var(--orange); background: rgba(247,108,12,.1); }
+    .btn-outline svg { width: 16px; height: 16px; stroke: white; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+    .hero-stats { position: absolute; bottom: 48px; left: 5%; right: 5%; display: flex; z-index: 2; animation: fadeUp .8s .3s ease both; opacity: 0; }
+    .hero-stat { flex: 1; padding: 20px 28px; border-left: 2px solid rgba(255,255,255,.08); }
+    .hero-stat:first-child { border-left: 2px solid var(--orange); }
+    .hero-stat-number { font-family: 'Bebas Neue', sans-serif; font-size: 38px; color: var(--orange); letter-spacing: 1px; }
+    .hero-stat-label  { font-size: 11px; color: var(--gray); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+    /* ─── SHARED ─── */
+    section { padding: 100px 5%; }
+    .section-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--orange); margin-bottom: 14px; padding-left: 28px; position: relative; }
+    .section-tag::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 18px; height: 2px; background: var(--orange); }
+    .section-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px,5vw,58px); line-height: 1; letter-spacing: 1.5px; color: var(--blue); }
+    .section-title span { color: var(--orange); }
+
+    /* ─── SOBRE ─── */
+    #sobre { background: var(--gray-light); position: relative; overflow: hidden; }
+    #sobre::before { content: 'REBOQUES'; position: absolute; right: -20px; bottom: -40px; font-family: 'Bebas Neue', sans-serif; font-size: 200px; color: rgba(10,38,71,0.04); pointer-events: none; white-space: nowrap; }
+    .sobre-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; max-width: 1200px; margin: 0 auto; }
+    .sobre-text p { font-size: 16px; line-height: 1.8; color: #4A5568; margin-bottom: 18px; }
+    .sobre-text strong { color: var(--blue); }
+    .sobre-features { display: flex; flex-direction: column; gap: 16px; margin-top: 32px; }
+    .sobre-feature { display: flex; align-items: flex-start; gap: 16px; padding: 18px 20px; background: var(--white); border-left: 3px solid var(--orange); box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: transform .2s, box-shadow .2s; }
+    .sobre-feature:hover { transform: translateX(6px); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .feature-icon { width: 40px; height: 40px; background: rgba(247,108,12,.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .feature-icon svg { width: 20px; height: 20px; stroke: var(--orange); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .feature-text strong { display: block; font-size: 14px; color: var(--blue); margin-bottom: 3px; }
+    .feature-text span   { font-size: 13px; color: var(--gray); }
+
+    .sobre-visual-card { background: var(--blue); padding: 48px 40px; position: relative; overflow: hidden; }
+    .sobre-visual-card::before { content: ''; position: absolute; top: 0; right: 0; width: 120px; height: 120px; background: var(--orange); clip-path: polygon(100% 0, 0 0, 100% 100%); }
+    .sobre-visual-card-title { font-family: 'Bebas Neue', sans-serif; font-size: 48px; color: var(--white); letter-spacing: 2px; margin-bottom: 24px; line-height: 1; }
+    .sobre-visual-card-title span { color: var(--orange); }
+    .sobre-visual-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .sobre-visual-list li { display: flex; align-items: center; gap: 12px; font-size: 14px; color: rgba(255,255,255,.8); font-weight: 500; }
+    .check { width: 22px; height: 22px; background: var(--orange); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .check svg { width: 12px; height: 12px; stroke: white; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .sobre-accent-box { background: var(--orange); padding: 20px 24px; margin-top: 20px; display: flex; align-items: center; gap: 16px; }
+    .sobre-accent-box .big   { font-family: 'Bebas Neue', sans-serif; font-size: 44px; color: var(--white); }
+    .sobre-accent-box .small { font-size: 12px; color: rgba(255,255,255,.85); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; line-height: 1.4; }
+
+    /* ─── SERVIÇOS ─── */
+    #servicos { background: var(--blue); position: relative; overflow: hidden; }
+    #servicos::before { content: ''; position: absolute; inset: 0; background-image: repeating-linear-gradient(-45deg, transparent 0, transparent 38px, rgba(255,255,255,.02) 38px, rgba(255,255,255,.02) 40px); }
+    .servicos-header { text-align: center; position: relative; z-index: 1; margin-bottom: 60px; }
+    .servicos-header .section-tag   { color: var(--orange-light); }
+    .servicos-header .section-title { color: var(--white); }
+    .servicos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 2px; position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; }
+    .servico-card { background: var(--blue-mid); padding: 48px 36px; position: relative; overflow: hidden; transition: background .25s; }
+    .servico-card:hover { background: var(--blue-light); }
+    .servico-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--orange); transform: scaleX(0); transition: transform .3s; }
+    .servico-card:hover::after { transform: scaleX(1); }
+    .servico-number { font-family: 'Bebas Neue', sans-serif; font-size: 80px; color: rgba(255,255,255,.05); position: absolute; top: 12px; right: 20px; line-height: 1; }
+    .servico-icon { width: 56px; height: 56px; background: rgba(247,108,12,.12); border: 1px solid rgba(247,108,12,.25); display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+    .servico-icon svg { width: 26px; height: 26px; stroke: var(--orange); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+    .servico-title { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 700; color: var(--white); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
+    .servico-desc { font-size: 14px; color: var(--gray); line-height: 1.7; margin-bottom: 24px; }
+    .servico-price       { font-family: 'Bebas Neue', sans-serif; font-size: 32px; color: var(--orange); letter-spacing: 1px; }
+    .servico-price-label { font-size: 11px; color: var(--gray); letter-spacing: 2px; text-transform: uppercase; }
+
+    /* ─── MODELOS ─── */
+    #modelos { background: var(--white); }
+    .modelos-header { margin-bottom: 56px; }
+    .modelos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 20px; max-width: 1200px; }
+    .modelo-card { background: var(--gray-light); overflow: hidden; transition: transform .25s, box-shadow .25s; border: 1px solid rgba(0,0,0,0.06); }
+    .modelo-card:hover { transform: translateY(-6px); box-shadow: 0 16px 40px rgba(10,38,71,.15); }
+    .modelo-img { height: 180px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .modelo-img-icon { opacity: .3; }
+    .modelo-img-icon svg { width: 64px; height: 64px; stroke: white; fill: none; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+    .modelo-badge { position: absolute; top: 12px; left: 12px; background: var(--orange); color: var(--white); font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 4px 10px; }
+    .modelo-body { padding: 22px; }
+    .modelo-name { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: var(--blue); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    .modelo-desc { font-size: 13px; color: var(--gray); line-height: 1.6; margin-bottom: 16px; }
+    .modelo-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .modelo-tag { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--blue-light); background: rgba(20,66,114,.1); padding: 3px 10px; }
+
+    /* ─── DIFERENCIAIS ─── */
+    #diferenciais { background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%); padding: 80px 5%; }
+    .diff-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 40px; max-width: 1200px; margin: 0 auto; }
+    .diff-item { text-align: center; }
+    .diff-icon-wrap { width: 52px; height: 52px; margin: 0 auto 16px; border: 1.5px solid rgba(255,255,255,.4); display: flex; align-items: center; justify-content: center; }
+    .diff-icon-wrap svg { width: 24px; height: 24px; stroke: white; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .diff-number { font-family: 'Bebas Neue', sans-serif; font-size: 52px; color: var(--white); line-height: 1; }
+    .diff-label  { font-size: 11px; color: rgba(255,255,255,.75); font-weight: 600; letter-spacing: 2px; text-transform: uppercase; margin-top: 6px; }
+
+    /* ─── DEPOIMENTOS ─── */
+    #depoimentos { background: var(--gray-light); }
+    .dep-header { margin-bottom: 56px; }
+    .dep-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 20px; max-width: 1200px; }
+    .dep-card { background: var(--white); padding: 32px; border-top: 3px solid var(--orange); box-shadow: 0 2px 16px rgba(0,0,0,0.07); transition: transform .2s; }
+    .dep-card:hover { transform: translateY(-4px); }
+    .dep-quote { margin-bottom: 16px; }
+    .dep-quote svg { display: block; }
+    .dep-stars { display: flex; gap: 4px; margin-bottom: 16px; }
+    .dep-stars svg { width: 14px; height: 14px; fill: var(--orange); }
+    .dep-text { font-size: 15px; color: #4A5568; line-height: 1.7; margin-bottom: 20px; font-style: italic; }
+    .dep-author-row { display: flex; align-items: center; gap: 10px; }
+    .dep-avatar { width: 36px; height: 36px; background: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .dep-avatar svg { width: 18px; height: 18px; stroke: rgba(255,255,255,.6); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .dep-author { font-weight: 700; font-size: 14px; color: var(--blue); }
+
+    /* ─── CONTATO ─── */
+    #contato { background: var(--blue); }
+    .contato-inner { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+    .contato-left .section-title { color: var(--white); }
+    .contato-desc { font-size: 16px; color: var(--gray); line-height: 1.7; margin: 24px 0 40px; }
+    .contato-items { display: flex; flex-direction: column; gap: 20px; }
+    .contato-item { display: flex; align-items: flex-start; gap: 16px; padding: 20px; background: rgba(255,255,255,.05); border-left: 3px solid var(--orange); }
+    .contato-item-icon { width: 40px; height: 40px; background: rgba(247,108,12,.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .contato-item-icon svg { width: 20px; height: 20px; stroke: var(--orange); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+    .contato-item-text strong { display: block; font-size: 11px; color: var(--orange); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+    .contato-item-text span   { font-size: 14px; color: rgba(255,255,255,.8); line-height: 1.5; }
+
+    .contato-cta-box { background: var(--orange); padding: 48px 40px; }
+    .contato-cta-box h3 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; color: var(--white); letter-spacing: 2px; margin-bottom: 12px; }
+    .contato-cta-box p  { font-size: 14px; color: rgba(255,255,255,.85); line-height: 1.6; margin-bottom: 32px; }
+
+    .btn-white { background: var(--white); color: var(--orange); padding: 16px 32px; font-weight: 700; font-size: 14px; letter-spacing: 1.5px; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); transition: background .2s, transform .15s; }
+    .btn-white:hover { background: var(--blue); color: var(--white); transform: translateY(-2px); }
+    .btn-white svg { width: 18px; height: 18px; stroke: var(--orange); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; transition: stroke .2s; }
+    .btn-white:hover svg { stroke: var(--white); }
+
+    .contato-hours { margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.2); }
+    .contato-hours-title { font-size: 11px; color: rgba(255,255,255,.6); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+    .contato-hours-row { display: flex; justify-content: space-between; font-size: 13px; color: rgba(255,255,255,.8); padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.07); }
+    .contato-hours-row span:last-child { color: var(--white); font-weight: 600; }
+
+    /* ─── FOOTER ─── */
+    footer { background: #06172A; padding: 30px 5%; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-top: 2px solid var(--orange); }
+    .footer-copy { font-size: 13px; color: var(--gray); }
+    .footer-copy span { color: var(--orange); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { font-size: 12px; color: var(--gray); text-decoration: none; letter-spacing: 1px; text-transform: uppercase; transition: color .2s; }
+    .footer-links a:hover { color: var(--orange); }
+
+    /* ─── FAB ─── */
+    .whatsapp-fab { position: fixed; bottom: 28px; right: 28px; z-index: 200; width: 60px; height: 60px; background: #25D366; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(37,211,102,.5); text-decoration: none; transition: transform .2s, box-shadow .2s; animation: fabPop .5s 1s cubic-bezier(.34,1.56,.64,1) both; }
+    @keyframes fabPop { from{opacity:0;transform:scale(0)} to{opacity:1;transform:scale(1)} }
+    .whatsapp-fab:hover { transform: scale(1.1); box-shadow: 0 12px 32px rgba(37,211,102,.6); }
+    .whatsapp-fab svg { width: 28px; height: 28px; fill: white; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width:900px) {
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+      .nav-links.open { display: flex; flex-direction: column; position: fixed; top: 70px; left: 0; right: 0; background: var(--blue); padding: 24px 5%; gap: 16px; border-bottom: 2px solid var(--orange); }
+      .sobre-grid, .contato-inner { grid-template-columns: 1fr; gap: 40px; }
+      .hero-stats { position: relative; bottom: auto; margin-top: 48px; flex-wrap: wrap; }
+      .hero-diagonal, .hero-diagonal-accent { display: none; }
+      #hero { padding: 100px 5% 60px; }
+    }
+    @media (max-width:600px) {
+      section { padding: 70px 5%; }
+      .hero-stat { flex: 1 1 45%; }
+      .diff-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24"><rect x="1" y="8" width="13" height="9" rx="1"/><path d="M14 10h4l3 3v4h-7V10z"/><circle cx="5" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg>
+    </div>
+    <div class="nav-logo-text">
+      <span class="brand">Rocha Reboques</span>
+      <span class="sub">Pelotas · RS</span>
+    </div>
+  </a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#sobre">Sobre</a></li>
+    <li><a href="#servicos">Serviços</a></li>
+    <li><a href="#modelos">Modelos</a></li>
+    <li><a href="#depoimentos">Avaliações</a></li>
+    <li><a href="#contato">Contato</a></li>
+  </ul>
+  <a href="https://wa.me/5553999627279?text=Olá,%20estou%20vindo%20pelo%20site%20e%20gostaria%20de%20um%20orçamento." class="nav-cta" target="_blank">
+    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+    WhatsApp
+  </a>
+  <div class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-bg-pattern"></div>
+  <div class="hero-orange-bar"></div>
+  <div class="hero-diagonal"></div>
+  <div class="hero-diagonal-accent"></div>
+  <div class="hero-content">
+    <div class="hero-badge"><div class="hero-badge-dot"></div>Pelotas · RS — Atendimento Imediato</div>
+    <h1 class="hero-title">Rocha<br><span>Reboques</span></h1>
+    <p class="hero-sub">Venda &amp; Aluguel de Reboques</p>
+    <p class="hero-desc">Reboques 100% galvanizados, revisados e prontos para rodar. Modelos para transporte de carga, veículos, animais e mais — com entrega rápida em Pelotas e região.</p>
+    <div class="hero-actions">
+      <a href="https://wa.me/5553999627279?text=Olá,%20gostaria%20de%20um%20orçamento." class="btn-primary" target="_blank">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Solicitar Orçamento
+      </a>
+      <a href="#modelos" class="btn-outline">
+        Ver Modelos
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="hero-stat-number">21x</div><div class="hero-stat-label">Parcelamento</div></div>
+      <div class="hero-stat"><div class="hero-stat-number">R$70</div><div class="hero-stat-label">Aluguel/dia</div></div>
+      <div class="hero-stat"><div class="hero-stat-number">100%</div><div class="hero-stat-label">Galvanizados</div></div>
+      <div class="hero-stat"><div class="hero-stat-number">+6</div><div class="hero-stat-label">Modelos</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SOBRE -->
+<section id="sobre">
+  <div class="sobre-grid">
+    <div class="sobre-text">
+      <div class="section-tag">Quem somos</div>
+      <h2 class="section-title">Referência em<br><span>Reboques</span><br>no Sul do RS</h2>
+      <p style="margin-top:24px;">A <strong>Rocha Reboques</strong>, de Pelotas–RS, é referência na venda e aluguel de reboques e carretinhas para transporte de cargas, veículos e animais.</p>
+      <p>Trabalhamos com modelos abertos, fechados, plataformas, reboques para carga animal e asa delta — além de opções <strong>sob medida</strong>. Cada unidade sai revisada e pronta pra rodar.</p>
+      <div class="sobre-features">
+        <div class="sobre-feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <div class="feature-text">
+            <strong>Estrutura 100% Galvanizada</strong>
+            <span>Madeiramento tratado, amortecedores novos e pneus zero</span>
+          </div>
+        </div>
+        <div class="sobre-feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div class="feature-text">
+            <strong>Emplacamento e Despachante</strong>
+            <span>Facilitamos todo o processo burocrático pra você</span>
+          </div>
+        </div>
+        <div class="sobre-feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          </div>
+          <div class="feature-text">
+            <strong>Parcelamento em até 21x</strong>
+            <span>Menor taxa de cartão de crédito da região</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sobre-visual-card">
+        <div class="sobre-visual-card-title">Por que<br><span>escolher</span><br>a Rocha?</div>
+        <ul class="sobre-visual-list">
+          <li><div class="check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Reboques revisados e prontos pra rodar</li>
+          <li><div class="check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Galvanizados — máxima durabilidade</li>
+          <li><div class="check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Modelos abertos, fechados e sob medida</li>
+          <li><div class="check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Carga animal e asa delta disponíveis</li>
+          <li><div class="check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Aluguel diário, semanal e mensal</li>
+          <li><div class="check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>Transparência do início ao fim</li>
+        </ul>
+        <div class="sobre-accent-box">
+          <div class="big">21x</div>
+          <div class="small">Parcelamento<br>sem complicação</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVIÇOS -->
+<section id="servicos">
+  <div class="servicos-header">
+    <div class="section-tag">O que fazemos</div>
+    <h2 class="section-title">Nossos <span>Serviços</span></h2>
+  </div>
+  <div class="servicos-grid">
+    <div class="servico-card">
+      <div class="servico-number">01</div>
+      <div class="servico-icon">
+        <svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7" stroke-width="2.5"/></svg>
+      </div>
+      <div class="servico-title">Venda de Reboques</div>
+      <p class="servico-desc">Reboques novos, reforçados e revisados com estrutura galvanizada. Modelos para todas as necessidades com parcelamento facilitado.</p>
+      <div class="servico-price-label">A partir de</div>
+      <div class="servico-price">Consulte</div>
+    </div>
+    <div class="servico-card">
+      <div class="servico-number">02</div>
+      <div class="servico-icon">
+        <svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      </div>
+      <div class="servico-title">Aluguel Flexível</div>
+      <p class="servico-desc">Aluguel para transporte de cargas, veículos e mudanças. Opções diárias, semanais e mensais com entrega rápida.</p>
+      <div class="servico-price-label">A partir de</div>
+      <div class="servico-price">R$ 70/dia</div>
+    </div>
+    <div class="servico-card">
+      <div class="servico-number">03</div>
+      <div class="servico-icon">
+        <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      </div>
+      <div class="servico-title">Sob Medida</div>
+      <p class="servico-desc">Fabricamos reboques personalizados conforme sua necessidade. Dimensões, capacidade e acabamento definidos com você.</p>
+      <div class="servico-price-label">Projeto</div>
+      <div class="servico-price">Personalizado</div>
+    </div>
+    <div class="servico-card">
+      <div class="servico-number">04</div>
+      <div class="servico-icon">
+        <svg viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+      </div>
+      <div class="servico-title">Emplacamento</div>
+      <p class="servico-desc">Facilitamos todo o processo de emplacamento e despachante. Você compra e a gente cuida da documentação.</p>
+      <div class="servico-price-label">Serviço</div>
+      <div class="servico-price">Completo</div>
+    </div>
+  </div>
+</section>
+
+<!-- MODELOS -->
+<section id="modelos">
+  <div class="modelos-header">
+    <div class="section-tag">Catálogo</div>
+    <h2 class="section-title">Modelos <span>Disponíveis</span></h2>
+  </div>
+  <div class="modelos-grid">
+    <div class="modelo-card">
+      <div class="modelo-img" style="background:linear-gradient(135deg,#0A2647,#144272);">
+        <div class="modelo-img-icon"><svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
+        <div class="modelo-badge">Disponível</div>
+      </div>
+      <div class="modelo-body">
+        <div class="modelo-name">Reboque Aberto</div>
+        <p class="modelo-desc">Ideal para transporte de cargas gerais, materiais de construção e mudanças. Estrutura galvanizada com madeiramento tratado.</p>
+        <div class="modelo-tags"><span class="modelo-tag">Galvanizado</span><span class="modelo-tag">Venda</span><span class="modelo-tag">Aluguel</span></div>
+      </div>
+    </div>
+    <div class="modelo-card">
+      <div class="modelo-img" style="background:linear-gradient(135deg,#0F3D6E,#1A5C9A);">
+        <div class="modelo-img-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+        <div class="modelo-badge">Disponível</div>
+      </div>
+      <div class="modelo-body">
+        <div class="modelo-name">Reboque Fechado</div>
+        <p class="modelo-desc">Proteção total para sua carga. Perfeito para transporte de móveis e itens que precisam de cobertura total.</p>
+        <div class="modelo-tags"><span class="modelo-tag">Galvanizado</span><span class="modelo-tag">Venda</span><span class="modelo-tag">Aluguel</span></div>
+      </div>
+    </div>
+    <div class="modelo-card">
+      <div class="modelo-img" style="background:linear-gradient(135deg,#0A2647,#205295);">
+        <div class="modelo-img-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+        <div class="modelo-badge">Disponível</div>
+      </div>
+      <div class="modelo-body">
+        <div class="modelo-name">Plataforma</div>
+        <p class="modelo-desc">Ideal para transporte de veículos, máquinas e equipamentos pesados. Alta capacidade com estrutura reforçada.</p>
+        <div class="modelo-tags"><span class="modelo-tag">Reforçado</span><span class="modelo-tag">Venda</span><span class="modelo-tag">Alta capacidade</span></div>
+      </div>
+    </div>
+    <div class="modelo-card">
+      <div class="modelo-img" style="background:linear-gradient(135deg,#133A5E,#1B5E8A);">
+        <div class="modelo-img-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <div class="modelo-badge">Disponível</div>
+      </div>
+      <div class="modelo-body">
+        <div class="modelo-name">Carga Animal</div>
+        <p class="modelo-desc">Reboque especial para transporte seguro de animais. Ventilação adequada e piso antiderrapante.</p>
+        <div class="modelo-tags"><span class="modelo-tag">Galvanizado</span><span class="modelo-tag">Venda</span><span class="modelo-tag">Equinos/Bovinos</span></div>
+      </div>
+    </div>
+    <div class="modelo-card">
+      <div class="modelo-img" style="background:linear-gradient(135deg,#0A2647,#0F4C81);">
+        <div class="modelo-img-icon"><svg viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1111 8H2m10.59 11.41A2 2 0 1014 16H2m15.73-8.27A2.5 2.5 0 1119.5 12H2"/></svg></div>
+        <div class="modelo-badge">Disponível</div>
+      </div>
+      <div class="modelo-body">
+        <div class="modelo-name">Asa Delta</div>
+        <p class="modelo-desc">Reboque específico para transporte de asas delta e paragliders. Design especializado para segurança do equipamento.</p>
+        <div class="modelo-tags"><span class="modelo-tag">Específico</span><span class="modelo-tag">Venda</span><span class="modelo-tag">Esporte</span></div>
+      </div>
+    </div>
+    <div class="modelo-card">
+      <div class="modelo-img" style="background:linear-gradient(135deg,#C4540A,#F76C0C);">
+        <div class="modelo-img-icon"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+        <div class="modelo-badge" style="background:var(--blue);">Sob Medida</div>
+      </div>
+      <div class="modelo-body">
+        <div class="modelo-name">Personalizado</div>
+        <p class="modelo-desc">Não encontrou o modelo ideal? Fabricamos reboques sob medida conforme suas necessidades específicas.</p>
+        <div class="modelo-tags"><span class="modelo-tag">Customizado</span><span class="modelo-tag">Sob consulta</span></div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:48px;">
+    <a href="https://wa.me/5553999627279?text=Olá,%20gostaria%20de%20ver%20os%20modelos%20disponíveis." class="btn-primary" target="_blank" style="background:var(--blue);box-shadow:0 8px 24px rgba(10,38,71,.3);">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Ver disponibilidade no WhatsApp
+    </a>
+  </div>
+</section>
+
+<!-- DIFERENCIAIS -->
+<section id="diferenciais">
+  <div class="diff-grid">
+    <div class="diff-item">
+      <div class="diff-icon-wrap"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+      <div class="diff-number">100%</div><div class="diff-label">Galvanizados</div>
+    </div>
+    <div class="diff-item">
+      <div class="diff-icon-wrap"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+      <div class="diff-number">21x</div><div class="diff-label">Parcelamento</div>
+    </div>
+    <div class="diff-item">
+      <div class="diff-icon-wrap"><svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <div class="diff-number">24h</div><div class="diff-label">Entrega Rápida</div>
+    </div>
+    <div class="diff-item">
+      <div class="diff-icon-wrap"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>
+      <div class="diff-number">0km</div><div class="diff-label">Pneus Novos</div>
+    </div>
+    <div class="diff-item">
+      <div class="diff-icon-wrap"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" stroke="white" stroke-width="1.75" fill="none"/></svg></div>
+      <div class="diff-number">5★</div><div class="diff-label">Avaliações</div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPOIMENTOS -->
+<section id="depoimentos">
+  <div class="dep-header">
+    <div class="section-tag">Quem já foi</div>
+    <h2 class="section-title">O que nossos<br><span>clientes</span> dizem</h2>
+  </div>
+  <div class="dep-grid">
+
+    <div class="dep-card">
+      <div class="dep-quote">
+        <svg width="32" height="24" viewBox="0 0 32 24"><path d="M0 24V14.4C0 6.08 4.48 1.28 13.44 0l1.44 2.56C10.56 3.68 8.16 6.08 7.68 9.6H12V24H0zm16 0V14.4C16 6.08 20.48 1.28 29.44 0l1.44 2.56c-4.32 1.12-6.72 3.52-7.2 7.04H28V24H16z" fill="var(--orange)" opacity=".2"/></svg>
+      </div>
+      <div class="dep-stars">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <p class="dep-text">"Ótimo atendimento e produto de qualidade. O melhor preço e menores taxas no cartão de crédito da região."</p>
+      <div class="dep-author-row">
+        <div class="dep-avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="dep-author">Paulo Henrique</div>
+      </div>
+    </div>
+
+    <div class="dep-card">
+      <div class="dep-quote">
+        <svg width="32" height="24" viewBox="0 0 32 24"><path d="M0 24V14.4C0 6.08 4.48 1.28 13.44 0l1.44 2.56C10.56 3.68 8.16 6.08 7.68 9.6H12V24H0zm16 0V14.4C16 6.08 20.48 1.28 29.44 0l1.44 2.56c-4.32 1.12-6.72 3.52-7.2 7.04H28V24H16z" fill="var(--orange)" opacity=".2"/></svg>
+      </div>
+      <div class="dep-stars">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <p class="dep-text">"Comprei um reboque para 2 cavalos. Ótimo reboque, pessoas de confiança. Tive ótima relação. Recomendo, parabéns!"</p>
+      <div class="dep-author-row">
+        <div class="dep-avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="dep-author">Miguel Magalhães</div>
+      </div>
+    </div>
+
+    <div class="dep-card">
+      <div class="dep-quote">
+        <svg width="32" height="24" viewBox="0 0 32 24"><path d="M0 24V14.4C0 6.08 4.48 1.28 13.44 0l1.44 2.56C10.56 3.68 8.16 6.08 7.68 9.6H12V24H0zm16 0V14.4C16 6.08 20.48 1.28 29.44 0l1.44 2.56c-4.32 1.12-6.72 3.52-7.2 7.04H28V24H16z" fill="var(--orange)" opacity=".2"/></svg>
+      </div>
+      <div class="dep-stars">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <p class="dep-text">"Excelente atendimento e variedade em reboques, tanto para locação quanto para venda. Super recomendo!"</p>
+      <div class="dep-author-row">
+        <div class="dep-avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="dep-author">Flavia Nobre</div>
+      </div>
+    </div>
+
+    <div class="dep-card">
+      <div class="dep-quote">
+        <svg width="32" height="24" viewBox="0 0 32 24"><path d="M0 24V14.4C0 6.08 4.48 1.28 13.44 0l1.44 2.56C10.56 3.68 8.16 6.08 7.68 9.6H12V24H0zm16 0V14.4C16 6.08 20.48 1.28 29.44 0l1.44 2.56c-4.32 1.12-6.72 3.52-7.2 7.04H28V24H16z" fill="var(--orange)" opacity=".2"/></svg>
+      </div>
+      <div class="dep-stars">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <p class="dep-text">"Muito confiável. Reboques novos e com manutenção 100%. Preço acessível e atendimento de ótima qualidade."</p>
+      <div class="dep-author-row">
+        <div class="dep-avatar"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="dep-author">Tiago Gonçalves</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CONTATO -->
+<section id="contato">
+  <div class="contato-inner">
+    <div class="contato-left">
+      <div class="section-tag" style="color:var(--orange-light);">Fale conosco</div>
+      <h2 class="section-title" style="color:var(--white);">Solicite seu<br><span>Orçamento</span></h2>
+      <p class="contato-desc">Entre em contato pelo WhatsApp ou venha nos visitar. Atendemos Pelotas e toda a região com qualidade e agilidade.</p>
+      <div class="contato-items">
+        <div class="contato-item">
+          <div class="contato-item-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="contato-item-text"><strong>Endereço</strong><span>R. Bernardo José de Souza, 244<br>Fragata, Pelotas – RS, 96040-010</span></div>
+        </div>
+        <div class="contato-item">
+          <div class="contato-item-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.04 1.18 2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></div>
+          <div class="contato-item-text"><strong>WhatsApp</strong><span>(53) 99962-7279</span></div>
+        </div>
+        <div class="contato-item">
+          <div class="contato-item-icon"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div class="contato-item-text"><strong>Atendemos</strong><span>Pelotas, Rio Grande, Bagé e toda região sul do RS</span></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="contato-cta-box">
+        <h3>Pronto para<br>rodar?</h3>
+        <p>Clique abaixo e fale direto com a gente pelo WhatsApp. Respondemos rápido e te ajudamos a escolher o reboque ideal.</p>
+        <a href="https://wa.me/5553999627279?text=Olá,%20estou%20vindo%20pelo%20site%20e%20gostaria%20de%20um%20orçamento." class="btn-white" target="_blank">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Falar no WhatsApp
+        </a>
+        <div class="contato-hours">
+          <div class="contato-hours-title">Horário de Atendimento</div>
+          <div class="contato-hours-row"><span>Segunda a Sexta</span><span>08h – 18h</span></div>
+          <div class="contato-hours-row"><span>Sábado</span><span>08h – 12h</span></div>
+          <div class="contato-hours-row"><span>WhatsApp</span><span>Estendido</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-copy">© 2025 <span>Rocha Reboques</span>. Todos os direitos reservados. · Pelotas–RS</div>
+  <div class="footer-links">
+    <a href="#sobre">Sobre</a>
+    <a href="#servicos">Serviços</a>
+    <a href="#contato">Contato</a>
+  </div>
+</footer>
+
+<!-- WhatsApp FAB -->
+<a class="whatsapp-fab" href="https://wa.me/5553999627279?text=Olá,%20estou%20vindo%20pelo%20site%20e%20gostaria%20de%20um%20orçamento." target="_blank" title="Falar no WhatsApp">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+</a>
+
+<script>
+  function toggleMenu() { document.getElementById('navLinks').classList.toggle('open'); }
+  window.addEventListener('scroll', () => {
+    document.querySelector('nav').style.boxShadow = window.scrollY > 20 ? '0 4px 32px rgba(0,0,0,0.5)' : '0 4px 24px rgba(0,0,0,0.35)';
+  });
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.style.animation = 'fadeUp .6s ease both'; observer.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.servico-card, .modelo-card, .dep-card, .sobre-feature').forEach(el => { el.style.opacity = '0'; observer.observe(el); });
+</script>
+</body>
+</html>
