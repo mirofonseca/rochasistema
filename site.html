@@ -699,5 +699,11 @@
   }, { threshold: 0.12 });
   document.querySelectorAll('.servico-card, .modelo-card, .dep-card, .sobre-feature').forEach(el => { el.style.opacity = '0'; observer.observe(el); });
 </script>
+
+<!-- Vercel Speed Insights -->
+<script type="module">
+  import { injectSpeedInsights } from 'https://cdn.jsdelivr.net/npm/@vercel/speed-insights@2/dist/index.js';
+  injectSpeedInsights();
+</script>
 </body>
 </html>
