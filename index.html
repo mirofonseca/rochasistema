@@ -444,6 +444,43 @@ textarea.inp{resize:vertical;min-height:75px}
 .blocked-msg svg{width:52px;height:52px;stroke:rgba(0,0,0,.1);fill:none;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}
 .blocked-msg h3{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--muted);letter-spacing:1px}
 .blocked-msg p{font-size:13px;color:var(--muted);max-width:300px;line-height:1.6}
+
+/* ══ AUDITORIA ══ */
+.aud-row{
+  display:grid;grid-template-columns:32px 1fr auto;
+  gap:12px;align-items:start;
+  padding:12px 18px;border-bottom:1px solid var(--brd);
+  transition:background .1s;
+}
+.aud-row:last-child{border-bottom:none}
+.aud-row:hover{background:rgba(247,108,12,.025)}
+.aud-icon{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:1px;
+}
+.aud-icon svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.aud-icon.criar{background:rgba(22,163,74,.1);color:var(--grn)}
+.aud-icon.editar{background:rgba(247,108,12,.1);color:var(--org)}
+.aud-icon.excluir{background:rgba(220,38,38,.1);color:var(--red)}
+.aud-icon.encerrar{background:rgba(32,82,149,.1);color:var(--blu-l)}
+.aud-icon.login{background:rgba(10,38,71,.08);color:var(--blu)}
+.aud-icon.logout{background:rgba(107,122,141,.1);color:var(--muted)}
+.aud-icon.senha{background:rgba(217,119,6,.1);color:var(--amb)}
+.aud-icon.config{background:rgba(10,38,71,.08);color:var(--blu)}
+.aud-main{}
+.aud-action{font-size:13px;font-weight:700;color:var(--txt)}
+.aud-detail{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5}
+.aud-right{text-align:right;flex-shrink:0}
+.aud-user{font-size:11px;font-weight:700;color:var(--blu);letter-spacing:.5px}
+.aud-time{font-size:10px;color:var(--muted);margin-top:2px;white-space:nowrap}
+.aud-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.aud-filter-btn{padding:5px 12px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1.5px solid var(--brd);background:transparent;color:var(--muted);transition:all .15s}
+.aud-filter-btn.active{background:var(--blu);border-color:var(--blu);color:#fff}
+.aud-filter-btn.active.c-criar{background:var(--grn);border-color:var(--grn)}
+.aud-filter-btn.active.c-editar{background:var(--org);border-color:var(--org)}
+.aud-filter-btn.active.c-excluir{background:var(--red);border-color:var(--red)}
+.aud-counter{font-size:11px;color:var(--muted);margin-left:auto;font-weight:600}
 </style>
 </head>
 <body>
@@ -577,6 +614,12 @@ textarea.inp{resize:vertical;min-height:75px}
         <div class="nav-item" id="nav-relatorios" onclick="goTo('relatorios')">
           <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Relatórios
+        </div>
+
+        <div class="nav-item" id="nav-historico" onclick="goTo('historico')">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          Histórico / Auditoria
+          <span class="nivel-badge nivel-gerente" style="font-size:8px;padding:2px 6px">Gerente</span>
         </div>
 
         <div class="sb-divider"></div>
@@ -924,6 +967,31 @@ textarea.inp{resize:vertical;min-height:75px}
         <div class="card" style="max-width:500px;margin-top:4px">
           <div class="card-hd"><div class="card-title">Informações da Conta</div></div>
           <div class="card-body" id="mc-info"></div>
+        </div>
+      </div>
+
+      <!-- ════ PAGE: HISTÓRICO / AUDITORIA ════ -->
+      <div class="page" id="page-historico">
+        <div class="ph">
+          <div class="ph-left">
+            <div class="ph-tag">Segurança</div>
+            <div class="ph-title">Histórico de Alterações</div>
+            <div class="ph-sub">Registro completo de todas as ações realizadas no sistema</div>
+          </div>
+          <div class="ph-actions">
+            <button class="btn btn-ghost" onclick="exportarAuditoria()">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Exportar Log
+            </button>
+            <button class="btn btn-red" onclick="limparAuditoria()">
+              <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+              Limpar Log
+            </button>
+          </div>
+        </div>
+        <div class="aud-filters" id="aud-filters"></div>
+        <div class="card" id="aud-card">
+          <div class="card-body" style="padding:0" id="aud-lista"></div>
         </div>
       </div>
 
@@ -1684,17 +1752,21 @@ function salvarAluguel(){
     const idx=al.findIndex(a=>a.id===editId);
     if(idx>=0){
       const oldRbId=al[idx].rbId;
+      const cNome=DB.get(KEY.cl).find(x=>x.id===cliId)?.nome||cliId;
+      const rNome=DB.get(KEY.rb).find(x=>x.id===rbId)?.nome||rbId;
       al[idx]={...al[idx],cliId,rbId,saida,dev,diaria,total,pag,status,obs};
-      // Reboque mudou
       if(oldRbId!==rbId){
         const oi=rb.findIndex(r=>r.id===oldRbId);
         if(oi>=0&&rb[oi].status==='alugado') rb[oi].status='disponivel';
         if(status==='ativo'){const ni=rb.findIndex(r=>r.id===rbId);if(ni>=0)rb[ni].status='alugado';}
         DB.set(KEY.rb,rb);
       }
+      auditLog('editar','Aluguel',`Aluguel editado — Cliente: ${cNome}`,`Reboque: ${rNome} · Saída: ${fmtDate(saida)} · Dev: ${fmtDate(dev)} · Total: ${fmt(total)} · Pag: ${pag}`);
     }
     toast('Aluguel atualizado!','success');
   } else {
+    const cNome=DB.get(KEY.cl).find(x=>x.id===cliId)?.nome||cliId;
+    const rNome=DB.get(KEY.rb).find(x=>x.id===rbId)?.nome||rbId;
     const novo={id:DB.uid(),cliId,rbId,saida,dev,diaria,total,pag,status,obs,criado:today()};
     al.push(novo);
     if(status==='ativo'){
@@ -1702,6 +1774,7 @@ function salvarAluguel(){
       if(ri>=0) rb[ri].status='alugado';
       DB.set(KEY.rb,rb);
     }
+    auditLog('criar','Aluguel',`Novo aluguel criado — Cliente: ${cNome}`,`Reboque: ${rNome} · Saída: ${fmtDate(saida)} · Dev: ${fmtDate(dev)} · Total: ${fmt(total)} · Pag: ${pag}`);
     toast('Aluguel criado!','success');
   }
   DB.set(KEY.al,al);
@@ -1798,10 +1871,13 @@ function encerrarAluguel(id){
     const rb=DB.get(KEY.rb);
     const idx=al.findIndex(a=>a.id===id);if(idx<0)return;
     const rbId=al[idx].rbId;
+    const cNome=DB.get(KEY.cl).find(x=>x.id===al[idx].cliId)?.nome||'—';
+    const rNome=rb.find(x=>x.id===rbId)?.nome||'—';
     al[idx].status='encerrado';
     DB.set(KEY.al,al);
     const ri=rb.findIndex(r=>r.id===rbId);
     if(ri>=0&&rb[ri].status==='alugado'){rb[ri].status='disponivel';DB.set(KEY.rb,rb);}
+    auditLog('encerrar','Aluguel',`Aluguel encerrado — Cliente: ${cNome}`,`Reboque: ${rNome} liberado`);
     toast('Aluguel encerrado. Reboque liberado.','success');
     renderAlugueis();renderDashboard();renderReboques();
   },false);
@@ -1812,11 +1888,14 @@ function excluirAluguel(id){
     const al=DB.get(KEY.al);
     const rb=DB.get(KEY.rb);
     const a=al.find(x=>x.id===id);
+    const cNome=a?DB.get(KEY.cl).find(x=>x.id===a.cliId)?.nome||'—':'—';
+    const rNome=a?rb.find(x=>x.id===a.rbId)?.nome||'—':'—';
     if(a&&a.status==='ativo'){
       const ri=rb.findIndex(r=>r.id===a.rbId);
       if(ri>=0&&rb[ri].status==='alugado'){rb[ri].status='disponivel';DB.set(KEY.rb,rb);}
     }
     DB.set(KEY.al,al.filter(x=>x.id!==id));
+    auditLog('excluir','Aluguel',`Aluguel excluído — Cliente: ${cNome}`,`Reboque: ${rNome} · Total: ${a?fmt(a.total):'—'}`);
     toast('Aluguel excluído.','info');
     renderAlugueis();renderDashboard();
   });
@@ -1962,8 +2041,14 @@ function salvarReboque(){
   const obj={nome,tipo:document.getElementById('rb-tipo').value,placa:document.getElementById('rb-placa').value.trim(),cap:document.getElementById('rb-cap').value,diaria,status:document.getElementById('rb-status').value,obs:document.getElementById('rb-obs').value};
   const id=document.getElementById('rb-id').value;
   const rb=DB.get(KEY.rb);
-  if(id){const i=rb.findIndex(x=>x.id===id);if(i>=0)rb[i]={...rb[i],...obj};}
-  else{rb.push({id:DB.uid(),...obj});}
+  if(id){
+    const i=rb.findIndex(x=>x.id===id);
+    if(i>=0)rb[i]={...rb[i],...obj};
+    auditLog('editar','Reboque',`Reboque editado: ${nome}`,`Tipo: ${obj.tipo} · Placa: ${obj.placa||'—'} · Diária: ${fmt(diaria)} · Status: ${obj.status}`);
+  } else {
+    rb.push({id:DB.uid(),...obj});
+    auditLog('criar','Reboque',`Novo reboque cadastrado: ${nome}`,`Tipo: ${obj.tipo} · Placa: ${obj.placa||'—'} · Diária: ${fmt(diaria)}`);
+  }
   DB.set(KEY.rb,rb);
   fecharModal('modal-reboque');
   renderReboques();renderDashboard();
@@ -1974,7 +2059,9 @@ function excluirReboque(id){
   const al=DB.get(KEY.al).find(a=>a.rbId===id&&a.status==='ativo');
   if(al){toast('Este reboque está com aluguel ativo!','error');return}
   confirmar('Excluir Reboque','Tem certeza que deseja excluir este reboque?',()=>{
+    const r=DB.get(KEY.rb).find(x=>x.id===id);
     DB.set(KEY.rb,DB.get(KEY.rb).filter(x=>x.id!==id));
+    auditLog('excluir','Reboque',`Reboque excluído: ${r?.nome||id}`,`Tipo: ${r?.tipo||'—'} · Placa: ${r?.placa||'—'}`);
     renderReboques();renderDashboard();
     toast('Reboque excluído.','info');
   });
@@ -2056,8 +2143,14 @@ function salvarCliente(){
   const obj={nome,cpf:document.getElementById('cl-cpf').value.trim(),tel,email:document.getElementById('cl-email').value.trim(),end:document.getElementById('cl-end').value.trim(),cidade:document.getElementById('cl-cidade').value.trim(),cnh:document.getElementById('cl-cnh').value.trim(),cat:document.getElementById('cl-cat').value,obs:document.getElementById('cl-obs').value};
   const id=document.getElementById('cl-id').value;
   const cl=DB.get(KEY.cl);
-  if(id){const i=cl.findIndex(x=>x.id===id);if(i>=0)cl[i]={...cl[i],...obj};}
-  else{cl.push({id:DB.uid(),...obj});}
+  if(id){
+    const i=cl.findIndex(x=>x.id===id);
+    if(i>=0)cl[i]={...cl[i],...obj};
+    auditLog('editar','Cliente',`Cliente editado: ${nome}`,`Tel: ${tel} · CPF: ${obj.cpf||'—'} · Cidade: ${obj.cidade||'—'}`);
+  } else {
+    cl.push({id:DB.uid(),...obj});
+    auditLog('criar','Cliente',`Novo cliente cadastrado: ${nome}`,`Tel: ${tel} · CPF: ${obj.cpf||'—'} · Cidade: ${obj.cidade||'—'}`);
+  }
   DB.set(KEY.cl,cl);
   fecharModal('modal-cliente');
   renderClientes();
@@ -2068,7 +2161,9 @@ function excluirCliente(id){
   const al=DB.get(KEY.al).find(a=>a.cliId===id&&a.status==='ativo');
   if(al){toast('Este cliente possui aluguel ativo!','error');return}
   confirmar('Excluir Cliente','Tem certeza? O histórico de aluguéis será mantido.',()=>{
+    const c=DB.get(KEY.cl).find(x=>x.id===id);
     DB.set(KEY.cl,DB.get(KEY.cl).filter(x=>x.id!==id));
+    auditLog('excluir','Cliente',`Cliente excluído: ${c?.nome||id}`,`Tel: ${c?.tel||'—'} · CPF: ${c?.cpf||'—'}`);
     renderClientes();
     toast('Cliente excluído.','info');
   });
@@ -2139,6 +2234,7 @@ function renderRelatorios(){
 function salvarConfig(){
   const cfg={nome:document.getElementById('cfg-nome').value,tel:document.getElementById('cfg-tel').value,end:document.getElementById('cfg-end').value,cidade:document.getElementById('cfg-cidade').value,diaria:Number(document.getElementById('cfg-diaria').value)||70,multa:Number(document.getElementById('cfg-multa').value)||0};
   DB.setObj(KEY.cfg,cfg);
+  auditLog('config','Configuração','Configurações do sistema atualizadas',`Empresa: ${cfg.nome} · Diária padrão: ${fmt(cfg.diaria)}`);
   toast('Configurações salvas!','success');
 }
 
@@ -2219,6 +2315,7 @@ function fazerLogin(){
     errEl.classList.remove('show');
     usuarioAtual = u;
     setSessao({id:u.id,login:u.login,nome:u.nome,nivel:u.nivel});
+    auditLog('login','Sistema',`Login realizado: ${u.nome}`,`Nível: ${u.nivel} · IP: navegador local`);
 
     // Oculta tela de login
     document.getElementById('login-screen').classList.add('hidden');
@@ -2228,6 +2325,7 @@ function fazerLogin(){
 
 function fazerLogout(){
   confirmar('Sair do Sistema','Deseja realmente encerrar sua sessão?',()=>{
+    auditLog('logout','Sistema',`Logout: ${usuarioAtual?.nome||'—'}`,`Sessão encerrada pelo usuário`);
     removerSessao();
     usuarioAtual=null;
     document.getElementById('login-screen').classList.remove('hidden');
@@ -2273,11 +2371,13 @@ function atualizarTopbar(){
   const ddGer=document.getElementById('dd-gerenciar-wrap');
   if(ddGer) ddGer.style.display=isGer?'block':'none';
 
-  // Esconder Configurações e Relatórios para auxiliar
+  // Esconder Configurações, Relatórios e Histórico para auxiliar
   const navCfg=document.getElementById('nav-configuracoes');
   if(navCfg) navCfg.style.display=isGer?'flex':'none';
   const navRel=document.getElementById('nav-relatorios');
   if(navRel) navRel.style.display=isGer?'flex':'none';
+  const navHis=document.getElementById('nav-historico');
+  if(navHis) navHis.style.display=isGer?'flex':'none';
 }
 
 /* ══ PÁGINA USUÁRIOS ══ */
@@ -2371,25 +2471,30 @@ function salvarUsuario(){
   const usuarios=getUsuarios();
 
   if(!id){
-    // Novo: senha obrigatória
     if(!senha){toast('Informe a senha','error');return}
     if(senha.length<6){toast('Senha deve ter no mínimo 6 caracteres','error');return}
     if(senha!==conf){toast('Senhas não conferem','error');return}
     if(usuarios.find(u=>u.login===login)){toast('Este login já existe','error');return}
     usuarios.push({id:'u-'+DB.uid(),nome,login,senha:hashSenha(senha),nivel,criado:today(),ultimoAcesso:null});
+    auditLog('criar','Usuários',`Novo usuário criado: ${nome}`,`Login: @${login} · Nível: ${nivel}`);
     toast('Usuário criado!','success');
   } else {
     const idx=usuarios.findIndex(u=>u.id===id);
     if(idx<0) return;
     if(usuarios.find(u=>u.login===login&&u.id!==id)){toast('Este login já existe','error');return}
+    const detChanges=[];
+    if(usuarios[idx].nome!==nome) detChanges.push(`Nome: ${usuarios[idx].nome} → ${nome}`);
+    if(usuarios[idx].nivel!==nivel) detChanges.push(`Nível: ${usuarios[idx].nivel} → ${nivel}`);
     if(senha){
       if(senha.length<6){toast('Senha deve ter no mínimo 6 caracteres','error');return}
       if(senha!==conf){toast('Senhas não conferem','error');return}
       usuarios[idx].senha=hashSenha(senha);
+      detChanges.push('Senha alterada');
     }
     usuarios[idx].nome=nome;
     usuarios[idx].login=login;
     usuarios[idx].nivel=nivel;
+    auditLog('editar','Usuários',`Usuário editado: ${nome}`,detChanges.join(' · ')||'Sem alterações relevantes');
     toast('Usuário atualizado!','success');
   }
   setUsuarios(usuarios);
@@ -2403,6 +2508,7 @@ function excluirUsuario(id){
   if(!u) return;
   confirmar('Excluir Usuário',`Deseja excluir o usuário "${u.nome}"? Esta ação não pode ser desfeita.`,()=>{
     setUsuarios(getUsuarios().filter(x=>x.id!==id));
+    auditLog('excluir','Usuários',`Usuário excluído: ${u.nome}`,`Login: @${u.login} · Nível: ${u.nivel}`);
     renderUsuarios();
     toast('Usuário excluído.','info');
   });
@@ -2429,6 +2535,8 @@ function confirmarResetSenha(){
   if(idx<0) return;
   usuarios[idx].senha=hashSenha(nova);
   setUsuarios(usuarios);
+  const u=usuarios[idx];
+  auditLog('senha','Usuários',`Senha redefinida para: ${u.nome}`,`Login: @${u.login} · Redefinida por: ${usuarioAtual?.nome||'—'}`);
   fecharModal('modal-reset-senha');
   toast('Senha redefinida com sucesso!','success');
 }
@@ -2463,6 +2571,7 @@ function alterarSenha(){
   if(nova!==conf){toast('As novas senhas não conferem','error');return}
   usuarios[idx].senha=hashSenha(nova);
   setUsuarios(usuarios);
+  auditLog('senha','Minha Conta','Senha alterada pelo próprio usuário',`Login: @${usuarioAtual.login}`);
   document.getElementById('mc-senha-atual').value='';
   document.getElementById('mc-nova-senha').value='';
   document.getElementById('mc-conf-senha').value='';
@@ -2470,14 +2579,130 @@ function alterarSenha(){
 }
 
 /* ══════════════════════════════════════
+   AUDITORIA — LOG DE ALTERAÇÕES
+══════════════════════════════════════ */
+const KEY_LOG = 'rr2_auditoria';
+
+function getLogs(){ try{return JSON.parse(localStorage.getItem(KEY_LOG))||[]}catch{return[]} }
+function setLogs(v){ localStorage.setItem(KEY_LOG,JSON.stringify(v)) }
+
+const AUDIT_TIPO = {
+  criar:   {label:'Criado',    cls:'criar',  icon:'<polyline points="12 5 12 19"/><polyline points="5 12 12 19 19 12"/>'},
+  editar:  {label:'Editado',   cls:'editar', icon:'<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>'},
+  excluir: {label:'Excluído',  cls:'excluir',icon:'<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>'},
+  encerrar:{label:'Encerrado', cls:'encerrar',icon:'<polyline points="20 6 9 17 4 12"/>'},
+  login:   {label:'Login',     cls:'login',  icon:'<path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>'},
+  logout:  {label:'Logout',    cls:'logout', icon:'<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'},
+  senha:   {label:'Senha',     cls:'senha',  icon:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>'},
+  config:  {label:'Config',    cls:'config', icon:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33"/>'}
+};
+
+function auditLog(tipo, modulo, descricao, detalhes){
+  const logs=getLogs();
+  const entry={
+    id: DB.uid(),
+    tipo,
+    modulo,
+    descricao,
+    detalhes: detalhes||null,
+    usuario: usuarioAtual?.login||'sistema',
+    usuarioNome: usuarioAtual?.nome||'Sistema',
+    usuarioNivel: usuarioAtual?.nivel||'—',
+    ts: new Date().toISOString()
+  };
+  logs.unshift(entry); // mais recente primeiro
+  // Limita a 500 registros
+  if(logs.length>500) logs.splice(500);
+  setLogs(logs);
+}
+
+let _audFiltro = '';
+
+function renderHistorico(){
+  if(usuarioAtual?.nivel!=='gerente'){
+    document.getElementById('aud-lista').innerHTML=`<div class="blocked-msg"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><h3>Acesso Restrito</h3><p>Apenas gerentes podem ver o histórico de auditoria.</p></div>`;
+    document.getElementById('aud-filters').innerHTML='';
+    return;
+  }
+
+  let logs=getLogs();
+
+  // Filtros
+  const modulos=[...new Set(logs.map(l=>l.modulo))];
+  const tipos=[...new Set(logs.map(l=>l.tipo))];
+
+  document.getElementById('aud-filters').innerHTML=`
+    <button class="aud-filter-btn ${!_audFiltro?'active':''}" onclick="setAudFiltro('')">Todos</button>
+    ${['criar','editar','excluir','encerrar','login','logout','senha','config'].filter(t=>tipos.includes(t)).map(t=>`
+      <button class="aud-filter-btn ${_audFiltro===t?'active c-'+t:''}" onclick="setAudFiltro('${t}')">${AUDIT_TIPO[t]?.label||t}</button>`
+    ).join('')}
+    <span class="aud-counter">${logs.length} registro(s)</span>
+  `;
+
+  if(_audFiltro) logs=logs.filter(l=>l.tipo===_audFiltro);
+
+  const el=document.getElementById('aud-lista');
+  if(!logs.length){
+    el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div class="empty-t">Nenhum Registro</div><div class="empty-s">As ações do sistema aparecerão aqui</div></div>`;
+    return;
+  }
+
+  const fmtTs = ts=>{
+    const d=new Date(ts);
+    return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  };
+
+  el.innerHTML=logs.slice(0,200).map(l=>{
+    const t=AUDIT_TIPO[l.tipo]||AUDIT_TIPO.config;
+    return `
+    <div class="aud-row">
+      <div class="aud-icon ${t.cls}">
+        <svg viewBox="0 0 24 24">${t.icon}</svg>
+      </div>
+      <div class="aud-main">
+        <div class="aud-action"><span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-right:6px">${l.modulo}</span>${l.descricao}</div>
+        ${l.detalhes?`<div class="aud-detail">${l.detalhes}</div>`:''}
+      </div>
+      <div class="aud-right">
+        <div class="aud-user">@${l.usuario} <span style="font-weight:400;color:var(--muted)">(${l.usuarioNivel})</span></div>
+        <div class="aud-time">${fmtTs(l.ts)}</div>
+      </div>
+    </div>`
+  }).join('');
+
+  if(logs.length>200){
+    el.innerHTML+=`<div style="text-align:center;padding:14px;font-size:12px;color:var(--muted)">Exibindo os 200 registros mais recentes de ${logs.length} total. Exporte para ver todos.</div>`;
+  }
+}
+
+function setAudFiltro(f){ _audFiltro=f; renderHistorico(); }
+
+function exportarAuditoria(){
+  const data={auditoria:getLogs(),exportado:new Date().toISOString(),sistema:'Rocha Reboques'};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`auditoria-rocha-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
+  toast('Log exportado!','success');
+}
+
+function limparAuditoria(){
+  confirmar('Limpar Histórico','Apagar todos os registros de auditoria? Esta ação não pode ser desfeita.',()=>{
+    setLogs([]);
+    auditLog('excluir','Auditoria','Log de auditoria foi limpo');
+    renderHistorico();
+    toast('Histórico limpo.','info');
+  });
+}
+
+/* ══════════════════════════════════════
    NAVEGAÇÃO — override p/ incluir novas páginas
 ══════════════════════════════════════ */
-const _allPages=[...pages,'usuarios','minha-conta'];
+const _allPages=[...pages,'usuarios','minha-conta','historico'];
 
 function goTo(name){
   // Bloquear acesso a páginas restritas para auxiliar
-  const restrito=['relatorios','configuracoes','usuarios'];
-  if(restrito.includes(name)&&usuarioAtual?.nivel==='auxiliar'&&name!=='usuarios'){
+  const restrito=['relatorios','configuracoes','usuarios','historico'];
+  if(restrito.includes(name)&&usuarioAtual?.nivel==='auxiliar'){
     toast('Acesso restrito a gerentes.','error');
     return;
   }
@@ -2498,6 +2723,7 @@ function goTo(name){
     clientes:renderClientes,
     relatorios:renderRelatorios,
     usuarios:renderUsuarios,
+    historico:renderHistorico,
     'minha-conta':renderMinhaConta
   };
   if(renders[name]) renders[name]();
