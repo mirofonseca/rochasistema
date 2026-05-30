@@ -1866,6 +1866,15 @@ function verAluguel(id){
 }
 
 function encerrarAluguel(id){
+  const al=DB.get(KEY.al);
+  const a=al.find(x=>x.id===id);
+  if(!a) return;
+
+  if(a.pag!=='pago'){
+    toast('Pagamento pendente! Marque o aluguel como "Pago" antes de encerrar.','error');
+    return;
+  }
+
   confirmar('Encerrar Aluguel','Confirma o encerramento deste aluguel? O reboque será liberado para novas locações.',()=>{
     const al=DB.get(KEY.al);
     const rb=DB.get(KEY.rb);
