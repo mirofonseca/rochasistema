@@ -1330,1234 +1330,1020 @@ textarea.inp{resize:vertical;min-height:75px}
 <div id="toast-wrap"></div>
 
 <script>
-/* ══════════════════════════════════════
-   STORAGE
-══════════════════════════════════════ */
-const KEY = {rb:'rr2_reboques', cl:'rr2_clientes', al:'rr2_alugueis', cfg:'rr2_config'};
-const DB = {
-  get(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}},
-  set(k,v){localStorage.setItem(k,JSON.stringify(v))},
-  getObj(k,def){try{const d=localStorage.getItem(k);return d?JSON.parse(d):def}catch{return def}},
-  setObj(k,v){localStorage.setItem(k,JSON.stringify(v))},
-  uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+<script>
+/* ══════════════════════════════════════════════════════
+   API CLIENT — todas as operações via REST
+══════════════════════════════════════════════════════ */
+const API = window.location.origin;
+let _token = sessionStorage.getItem('rr_token') || null;
+let usuarioAtual = null;
+
+const api = {
+  async req(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (_token) opts.headers['x-auth-token'] = _token;
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    let res;
+    try { res = await fetch(API + path, opts); }
+    catch (e) { throw new Error('Sem conexão com o servidor. Verifique se o backend está rodando.'); }
+    let data;
+    try { data = await res.json(); } catch { data = {}; }
+    if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+    return data;
+  },
+  get:    (p)    => api.req('GET',    p),
+  post:   (p, b) => api.req('POST',   p, b),
+  put:    (p, b) => api.req('PUT',    p, b),
+  del:    (p)    => api.req('DELETE', p),
 };
 
-/* ══════════════════════════════════════
-   SEED
-══════════════════════════════════════ */
-function seedData(){
-  if(DB.get(KEY.rb).length) return;
-  const d=(n)=>{const x=new Date();x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
-  DB.set(KEY.rb,[
-    {id:'r1',nome:'Reboque Aberto 01',tipo:'Aberto',placa:'QRS-1234',cap:'800',diaria:70,status:'alugado',obs:'Bom estado geral'},
-    {id:'r2',nome:'Reboque Aberto 02',tipo:'Aberto',placa:'MNO-5678',cap:'800',diaria:70,status:'disponivel',obs:''},
-    {id:'r3',nome:'Reboque Fechado 01',tipo:'Fechado',placa:'DEF-9012',cap:'600',diaria:90,status:'disponivel',obs:'Com trava'},
-    {id:'r4',nome:'Plataforma Grande',tipo:'Plataforma',placa:'GHI-3456',cap:'2000',diaria:120,status:'alugado',obs:''},
-    {id:'r5',nome:'Carga Animal 01',tipo:'Carga Animal',placa:'JKL-7890',cap:'1200',diaria:100,status:'disponivel',obs:'Para cavalos e bovinos'},
-    {id:'r6',nome:'Asa Delta 01',tipo:'Asa Delta',placa:'ABC-2345',cap:'150',diaria:60,status:'manutencao',obs:'Em revisão'}
-  ]);
-  DB.set(KEY.cl,[
-    {id:'c1',nome:'Paulo Henrique Silva',cpf:'123.456.789-00',tel:'(53) 99911-1111',email:'paulo@email.com',end:'Rua das Flores, 100',cidade:'Pelotas',cnh:'12345678',cat:'B',obs:''},
-    {id:'c2',nome:'Miguel Magalhães',cpf:'987.654.321-00',tel:'(53) 99922-2222',email:'miguel@email.com',end:'Av. Bento, 200',cidade:'Pelotas',cnh:'87654321',cat:'B',obs:''},
-    {id:'c3',nome:'Flavia Nobre Costa',cpf:'111.222.333-44',tel:'(53) 99933-3333',email:'flavia@email.com',end:'Rua João, 300',cidade:'Rio Grande',cnh:'11223344',cat:'AB',obs:''},
-    {id:'c4',nome:'Tiago Gonçalves',cpf:'555.666.777-88',tel:'(53) 99944-4444',email:'tiago@email.com',end:'Av. Central, 400',cidade:'Pelotas',cnh:'55667788',cat:'B',obs:'Cliente fiel'}
-  ]);
-  DB.set(KEY.al,[
-    {id:'a1',cliId:'c1',rbId:'r1',saida:d(-5),dev:d(2),diaria:70,total:490,pag:'pago',status:'ativo',obs:'Retirou pessoalmente',criado:d(-5)},
-    {id:'a2',cliId:'c4',rbId:'r4',saida:d(-10),dev:d(-2),diaria:120,total:960,pag:'pago',status:'ativo',obs:'',criado:d(-10)},
-    {id:'a3',cliId:'c2',rbId:'r2',saida:d(-20),dev:d(-15),diaria:70,total:350,pag:'pago',status:'encerrado',obs:'',criado:d(-20)},
-    {id:'a4',cliId:'c3',rbId:'r3',saida:d(-3),dev:d(0),diaria:90,total:270,pag:'pendente',status:'ativo',obs:'Combinado pagar na volta',criado:d(-3)}
-  ]);
-}
-
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    HELPERS
-══════════════════════════════════════ */
-const today = ()=>new Date().toISOString().slice(0,10);
-const fmt = v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
-const fmtDate = s=>{if(!s)return'—';const[y,m,d]=s.split('-');return`${d}/${m}/${y}`};
-const dias = (s,e)=>Math.max(1,Math.round((new Date(e)-new Date(s))/(86400000)));
-const initials = n=>n.split(' ').slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
-const isAtrasado = a=>a.status==='ativo'&&a.dev<today();
-const statusReal = a=>isAtrasado(a)?'atrasado':a.status;
+══════════════════════════════════════════════════════ */
+const today   = () => new Date().toISOString().slice(0,10);
+const fmt     = v  => 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:0});
+const fmtDate = s  => { if (!s) return '—'; const [y,m,d] = s.slice(0,10).split('-'); return `${d}/${m}/${y}`; };
+const diasEnteTotal = (s, e) => { try { return Math.max(1, Math.round((new Date(e)-new Date(s))/86400000)); } catch { return 1; } };
+const initials = n => n.split(' ').slice(0,2).map(x=>x[0]||'').join('').toUpperCase();
+const isAtrasado = a => a.status === 'ativo' && a.devolucao < today();
+const statusReal  = a => isAtrasado(a) ? 'atrasado' : a.status;
 
-const tipoIconSVG = {
-  'Aberto':'<svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>',
-  'Fechado':'<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><line x1="12" y1="22" x2="12" y2="12"/></svg>',
-  'Plataforma':'<svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
-  'Carga Animal':'<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
-  'Asa Delta':'<svg viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1111 8H2m10.59 11.41A2 2 0 1014 16H2m15.73-8.27A2.5 2.5 0 1119.5 12H2"/></svg>',
-  'Personalizado':'<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>'
-};
 const tipoBg = {'Aberto':'#0A2647','Fechado':'#144272','Plataforma':'#1A5C9A','Carga Animal':'#133A5E','Asa Delta':'#0F4C81','Personalizado':'#C4540A'};
+const tipoIconSVG = {
+  'Aberto':         '<svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>',
+  'Fechado':        '<svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><line x1="12" y1="22" x2="12" y2="12"/></svg>',
+  'Plataforma':     '<svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  'Carga Animal':   '<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  'Asa Delta':      '<svg viewBox="0 0 24 24"><path d="M9.59 4.59A2 2 0 1111 8H2m10.59 11.41A2 2 0 1014 16H2"/></svg>',
+  'Personalizado':  '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>'
+};
 
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════════════
+   LOADING STATE
+══════════════════════════════════════════════════════ */
+function loadingHTML(msg='Carregando...') {
+  return `<div style="text-align:center;padding:40px;color:var(--muted)">
+    <div style="width:28px;height:28px;border:3px solid var(--brd);border-top-color:var(--org);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px"></div>
+    <div style="font-size:13px">${msg}</div>
+  </div>`;
+}
+const spinnerCSS = document.createElement('style');
+spinnerCSS.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(spinnerCSS);
+
+function setLoading(elId, msg) {
+  const el = document.getElementById(elId);
+  if (el) el.innerHTML = loadingHTML(msg);
+}
+
+/* ══════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════ */
+function toast(msg, type='info') {
+  const icons = {
+    success: '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:   '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+    info:    '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    warn:    '<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  };
+  const cls = {success:'t-grn', error:'t-red', warn:'t-amb', info:''};
+  const t = document.createElement('div');
+  t.className = `toast ${cls[type]||''}`;
+  t.innerHTML = `${icons[type]||icons.info}<span>${msg}</span>`;
+  document.getElementById('toast-wrap').appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(()=>t.remove(),300); }, 3500);
+}
+
+/* ══════════════════════════════════════════════════════
+   CONFIRM
+══════════════════════════════════════════════════════ */
+let _confirmCb = null;
+function confirmar(title, msg, cb, danger=true) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  const btn = document.getElementById('confirm-ok-btn');
+  btn.className = `btn ${danger?'btn-red':'btn-primary'}`;
+  btn.textContent = danger ? 'Excluir' : 'Confirmar';
+  _confirmCb = cb;
+  document.getElementById('confirm-overlay').classList.add('show');
+}
+function confirmarSim()  { document.getElementById('confirm-overlay').classList.remove('show'); if (_confirmCb) _confirmCb(); }
+function confirmarNao()  { document.getElementById('confirm-overlay').classList.remove('show'); }
+
+/* ══════════════════════════════════════════════════════
+   BADGE HTML
+══════════════════════════════════════════════════════ */
+function badgeSt(st) {
+  const m = { ativo:['bd-ativo','Ativo'], atrasado:['bd-atrasado','Atrasado'], encerrado:['bd-encerrado','Encerrado'], disponivel:['bd-disponivel','Disponível'], alugado:['bd-ativo','Alugado'], manutencao:['bd-manutencao','Manutenção'] };
+  const [c,l] = m[st] || ['bd-encerrado', st];
+  return `<span class="badge ${c}"><span class="bd-dot"></span>${l}</span>`;
+}
+function badgePag(p) {
+  const m = { pago:['bd-pago','Pago'], pendente:['bd-pendente','Pendente'], parcial:['bd-parcial','Parcial'] };
+  const [c,l] = m[p] || ['bd-encerrado', p];
+  return `<span class="badge ${c}">${l}</span>`;
+}
+
+/* ══════════════════════════════════════════════════════
    NAVIGATION
-══════════════════════════════════════ */
+══════════════════════════════════════════════════════ */
 let currentPage = 'dashboard';
-const pages = ['dashboard','alugueis','devolucoes','reboques','clientes','relatorios','configuracoes'];
+const _allPages = ['dashboard','alugueis','devolucoes','reboques','clientes','relatorios','configuracoes','usuarios','minha-conta','historico'];
 
-function goTo(name){
-  pages.forEach(p=>{
-    document.getElementById('page-'+p).classList.toggle('active',p===name);
-    const nav=document.getElementById('nav-'+p);
-    if(nav) nav.classList.toggle('active',p===name);
+function goTo(name) {
+  const restrito = ['relatorios','configuracoes','usuarios','historico'];
+  if (restrito.includes(name) && usuarioAtual?.nivel === 'auxiliar') {
+    toast('Acesso restrito a gerentes.','error'); return;
+  }
+  _allPages.forEach(p => {
+    document.getElementById('page-'+p)?.classList.toggle('active', p===name);
+    document.getElementById('nav-'+p)?.classList.toggle('active', p===name);
   });
-  currentPage=name;
+  currentPage = name;
   closeSidebar();
-  const renders={dashboard:renderDashboard,alugueis:renderAlugueis,devolucoes:renderDevolucoes,reboques:renderReboques,clientes:renderClientes,relatorios:renderRelatorios};
-  if(renders[name]) renders[name]();
+  document.getElementById('user-dropdown')?.classList.remove('show');
+  const renders = {
+    dashboard:    renderDashboard,
+    alugueis:     renderAlugueis,
+    devolucoes:   renderDevolucoes,
+    reboques:     renderReboques,
+    clientes:     renderClientes,
+    relatorios:   renderRelatorios,
+    usuarios:     renderUsuarios,
+    historico:    renderHistorico,
+    'minha-conta':renderMinhaConta,
+  };
+  if (renders[name]) renders[name]();
 }
 
-function toggleSidebar(){
-  const sb=document.getElementById('sidebar');
-  const hb=document.getElementById('hamburger');
-  const ov=document.getElementById('overlay');
-  const open=sb.classList.toggle('open');
-  hb.classList.toggle('open',open);
-  ov.classList.toggle('show',open);
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const hb = document.getElementById('hamburger');
+  const ov = document.getElementById('overlay');
+  const open = sb.classList.toggle('open');
+  hb.classList.toggle('open', open);
+  ov.classList.toggle('show', open);
 }
-function closeSidebar(){
+function closeSidebar() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('hamburger').classList.remove('open');
   document.getElementById('overlay').classList.remove('show');
 }
 
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    MODALS
-══════════════════════════════════════ */
-function abrirModal(id){document.getElementById(id).classList.add('open')}
-function fecharModal(id){document.getElementById(id).classList.remove('open')}
-function fecharSeOverlay(e,id){if(e.target===document.getElementById(id)) fecharModal(id)}
+══════════════════════════════════════════════════════ */
+function abrirModal(id)  { document.getElementById(id).classList.add('open'); }
+function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+function fecharSeOverlay(e, id) { if (e.target === document.getElementById(id)) fecharModal(id); }
 
-/* ══════════════════════════════════════
-   TOAST
-══════════════════════════════════════ */
-function toast(msg,type='info'){
-  const icons={success:'<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',error:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',info:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',warn:'<svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'};
-  const cls={success:'t-grn',error:'t-red',warn:'t-amb',info:''};
-  const t=document.createElement('div');
-  t.className=`toast ${cls[type]||''}`;
-  t.innerHTML=`${icons[type]||icons.info}<span>${msg}</span>`;
-  document.getElementById('toast-wrap').appendChild(t);
-  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},3200);
+/* ══════════════════════════════════════════════════════
+   AUTH — LOGIN / LOGOUT
+══════════════════════════════════════════════════════ */
+async function fazerLogin() {
+  const loginVal = document.getElementById('login-user').value.trim();
+  const senhaVal = document.getElementById('login-pass').value;
+  const errEl    = document.getElementById('login-error');
+  const errMsg   = document.getElementById('login-error-msg');
+  const btn      = document.getElementById('login-btn');
+
+  if (!loginVal || !senhaVal) {
+    errMsg.textContent = 'Preencha usuário e senha.';
+    errEl.classList.add('show'); return;
+  }
+  btn.innerHTML = 'Verificando...'; btn.disabled = true;
+
+  try {
+    const data = await api.post('/api/auth/login', { login: loginVal, senha: senhaVal });
+    _token = data.token;
+    sessionStorage.setItem('rr_token', _token);
+    sessionStorage.setItem('rr_usuario', JSON.stringify(data.usuario));
+    usuarioAtual = data.usuario;
+    errEl.classList.remove('show');
+    document.getElementById('login-screen').classList.add('hidden');
+    iniciarSistema();
+  } catch (e) {
+    errMsg.textContent = e.message || 'Usuário ou senha incorretos.';
+    errEl.classList.add('show');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Entrar';
+    btn.disabled = false;
+  }
 }
 
-/* ══════════════════════════════════════
-   CONFIRM
-══════════════════════════════════════ */
-let _confirmCb=null;
-function confirmar(title,msg,cb,danger=true){
-  document.getElementById('confirm-title').textContent=title;
-  document.getElementById('confirm-msg').textContent=msg;
-  const btn=document.getElementById('confirm-ok-btn');
-  btn.className=`btn ${danger?'btn-red':'btn-primary'}`;
-  btn.textContent=danger?'Excluir':'Confirmar';
-  _confirmCb=cb;
-  document.getElementById('confirm-overlay').classList.add('show');
-}
-function confirmarSim(){document.getElementById('confirm-overlay').classList.remove('show');if(_confirmCb)_confirmCb()}
-function confirmarNao(){document.getElementById('confirm-overlay').classList.remove('show')}
-
-/* ══════════════════════════════════════
-   BADGES HTML
-══════════════════════════════════════ */
-function badgeSt(st){
-  const map={ativo:['bd-ativo','Ativo'],atrasado:['bd-atrasado','Atrasado'],encerrado:['bd-encerrado','Encerrado'],disponivel:['bd-disponivel','Disponível'],alugado:['bd-ativo','Alugado'],manutencao:['bd-manutencao','Manutenção']};
-  const [cls,lbl]=map[st]||['bd-encerrado',st];
-  return `<span class="badge ${cls}"><span class="bd-dot"></span>${lbl}</span>`;
-}
-function badgePag(p){
-  const m={pago:['bd-pago','Pago'],pendente:['bd-pendente','Pendente'],parcial:['bd-parcial','Parcial']};
-  const [c,l]=m[p]||['bd-encerrado',p];
-  return `<span class="badge ${c}">${l}</span>`;
+function fazerLogout() {
+  confirmar('Sair do Sistema','Deseja encerrar sua sessão?', async () => {
+    try { await api.post('/api/auth/logout'); } catch {}
+    _token = null; usuarioAtual = null;
+    sessionStorage.removeItem('rr_token');
+    sessionStorage.removeItem('rr_usuario');
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('login-user').value = '';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-btn').innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Entrar';
+    document.getElementById('login-btn').disabled = false;
+    goTo('dashboard');
+  }, false);
 }
 
-/* ══════════════════════════════════════
-   UPDATE BADGES SIDEBAR
-══════════════════════════════════════ */
-function updateNavBadges(){
-  const al=DB.get(KEY.al);
-  const atrasados=al.filter(a=>isAtrasado(a));
-  const hoje_dev=al.filter(a=>a.status==='ativo'&&a.dev===today());
-  const b1=document.getElementById('badge-atrasados');
-  const b2=document.getElementById('badge-hoje');
-  if(atrasados.length){b1.style.display='flex';b1.textContent=atrasados.length}else{b1.style.display='none'}
-  if(hoje_dev.length){b2.style.display='flex';b2.textContent=hoje_dev.length}else{b2.style.display='none'}
+function toggleSenhaVis() {
+  const inp = document.getElementById('login-pass');
+  const ico = document.getElementById('eye-icon');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  ico.innerHTML = show
+    ? '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 }
 
-/* ══════════════════════════════════════
+function toggleUserMenu() { document.getElementById('user-dropdown').classList.toggle('show'); }
+document.addEventListener('click', e => {
+  const w = document.getElementById('user-menu-wrap');
+  if (w && !w.contains(e.target)) document.getElementById('user-dropdown')?.classList.remove('show');
+});
+
+function atualizarTopbar() {
+  if (!usuarioAtual) return;
+  const ini = initials(usuarioAtual.nome);
+  document.getElementById('tb-avatar-txt').textContent  = ini || 'U';
+  document.getElementById('tb-uname-txt').textContent   = usuarioAtual.nome.split(' ')[0];
+  document.getElementById('dd-username').textContent    = usuarioAtual.nome;
+  document.getElementById('dd-role').textContent        = usuarioAtual.nivel === 'gerente' ? 'Gerente · Acesso Total' : 'Auxiliar · Acesso Limitado';
+  const isGer = usuarioAtual.nivel === 'gerente';
+  ['nav-usuarios','nav-relatorios','nav-historico','nav-configuracoes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isGer ? 'flex' : 'none';
+  });
+  document.getElementById('dd-gerenciar-wrap').style.display = isGer ? 'block' : 'none';
+}
+
+async function updateNavBadges() {
+  try {
+    const stats = await api.get('/api/relatorios/dashboard');
+    const b1 = document.getElementById('badge-atrasados');
+    const b2 = document.getElementById('badge-hoje');
+    if (b1) { b1.style.display = stats.atrasados > 0 ? 'flex' : 'none'; b1.textContent = stats.atrasados; }
+    // devoluções hoje
+    const al = await api.get('/api/alugueis');
+    const hj = al.filter(a => a.status === 'ativo' && a.devolucao === today()).length;
+    if (b2) { b2.style.display = hj > 0 ? 'flex' : 'none'; b2.textContent = hj; }
+  } catch {}
+}
+
+/* ══════════════════════════════════════════════════════
    DASHBOARD
-══════════════════════════════════════ */
-function renderDashboard(){
-  const al=DB.get(KEY.al), rb=DB.get(KEY.rb), cl=DB.get(KEY.cl);
-  const t=today();
-  const ativos=al.filter(a=>a.status==='ativo');
-  const atrasados=al.filter(a=>isAtrasado(a));
-  const disponiveis=rb.filter(r=>r.status==='disponivel');
-  const mes=t.slice(0,7);
+══════════════════════════════════════════════════════ */
+async function renderDashboard() {
+  document.getElementById('dash-hoje-txt').textContent = `Carregando...`;
+  document.getElementById('dash-stats').innerHTML = '';
 
-  // Receita do mês: somente pagamento = "pago"
-  const receitaMes=al.filter(a=>a.criado&&a.criado.startsWith(mes)&&a.pag==='pago').reduce((s,a)=>s+Number(a.total),0);
+  try {
+    const [stats, al, rb, cl] = await Promise.all([
+      api.get('/api/relatorios/dashboard'),
+      api.get('/api/alugueis'),
+      api.get('/api/reboques'),
+      api.get('/api/clientes'),
+    ]);
 
-  // A Receber: todos aluguéis com pag = pendente ou parcial (qualquer mês, qualquer status exceto encerrado-pago)
-  const aReceberList=al.filter(a=>a.pag==='pendente'||a.pag==='parcial');
-  const aReceberPendente=aReceberList.filter(a=>a.pag==='pendente').reduce((s,a)=>s+Number(a.total),0);
-  const aReceberParcial=aReceberList.filter(a=>a.pag==='parcial').reduce((s,a)=>s+Number(a.total),0);
-  const aReceberTotal=aReceberPendente+aReceberParcial;
+    document.getElementById('dash-hoje-txt').textContent =
+      `Atualizado em ${fmtDate(today())} · ${cl.length} clientes · ${rb.length} reboques`;
 
-  document.getElementById('dash-hoje-txt').textContent=`Atualizado em ${fmtDate(t)} · ${cl.length} clientes · ${rb.length} reboques`;
+    document.getElementById('dash-stats').innerHTML = `
+      <div class="stat-card c-org"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg></div><div class="stat-val">${stats.ativos}</div><div class="stat-lbl">Aluguéis Ativos</div></div>
+      <div class="stat-card c-grn"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="stat-val" style="font-size:${Number(stats.receitaMes)>=10000?'22px':Number(stats.receitaMes)>=1000?'26px':'32px'}">${fmt(stats.receitaMes)}</div><div class="stat-lbl">Receita do Mês <span style="font-size:8px;font-weight:700;letter-spacing:1px;background:rgba(22,163,74,.15);color:var(--grn);padding:2px 5px;margin-left:3px">PAGO</span></div></div>
+      <div class="stat-card c-blu"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><rect x="1" y="8" width="13" height="9" rx="1"/><path d="M14 10h4l3 3v4h-7V10z"/><circle cx="5" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></div><div class="stat-val">${stats.disponiveis}</div><div class="stat-lbl">Reboques Livres</div></div>
+      <div class="stat-card c-red"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-val">${stats.atrasados}</div><div class="stat-lbl">Devoluções Atrasadas</div></div>
+    `;
 
-  document.getElementById('dash-stats').innerHTML=`
-    <div class="stat-card c-org"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div><div class="stat-val">${ativos.length}</div><div class="stat-lbl">Aluguéis Ativos</div></div>
-    <div class="stat-card c-grn"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="stat-val" style="font-size:${receitaMes>=10000?'22px':receitaMes>=1000?'26px':'32px'}">${fmt(receitaMes)}</div><div class="stat-lbl">Receita do Mês <span style="font-size:8px;font-weight:700;letter-spacing:1px;background:rgba(22,163,74,.15);color:var(--grn);padding:2px 5px;margin-left:3px">PAGO</span></div></div>
-    <div class="stat-card c-blu"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><rect x="1" y="8" width="13" height="9" rx="1"/><path d="M14 10h4l3 3v4h-7V10z"/><circle cx="5" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></div><div class="stat-val">${disponiveis.length}</div><div class="stat-lbl">Reboques Livres</div></div>
-    <div class="stat-card c-red"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="stat-val">${atrasados.length}</div><div class="stat-lbl">Devoluções Atrasadas</div></div>
-  `;
-
-  // ── PAINEL A RECEBER ──
-  const arEl=document.getElementById('dash-a-receber');
-  if(aReceberList.length){
-    const itens=aReceberList.slice().sort((a,b)=>Number(b.total)-Number(a.total)).slice(0,8).map(a=>{
-      const c=cl.find(x=>x.id===a.cliId)||{nome:'—'};
-      const r=rb.find(x=>x.id===a.rbId)||{nome:'—'};
-      const st=statusReal(a);
-      return `
-      <div class="ar-item ${a.pag}">
-        <div class="ar-item-info">
-          <div class="ar-item-name">${c.nome}</div>
-          <div class="ar-item-sub">${r.nome} · Dev: ${fmtDate(a.dev)}</div>
-        </div>
-        <div class="ar-item-badge">${badgePag(a.pag)} ${badgeSt(st)}</div>
-        <div class="ar-item-val">${fmt(a.total)}</div>
-      </div>`;
-    }).join('');
-
-    const mais=aReceberList.length>8?`<div style="font-size:11px;color:rgba(255,255,255,.35);padding:8px 12px;text-align:center">+${aReceberList.length-8} registro(s). <a href="#" onclick="goTo('alugueis')" style="color:var(--org-l)">Ver todos →</a></div>`:'';
-
-    arEl.innerHTML=`
-    <div class="ar-panel">
-      <div class="ar-panel-inner">
+    // Painel A Receber
+    const aReceberList = al.filter(a => a.pagamento === 'pendente' || a.pagamento === 'parcial');
+    const aReceberTotal = Number(stats.aReceber);
+    const aRecPend = aReceberList.filter(a=>a.pagamento==='pendente').reduce((s,a)=>s+Number(a.total),0);
+    const aRecParc = aReceberList.filter(a=>a.pagamento==='parcial').reduce((s,a)=>s+Number(a.total),0);
+    const arEl = document.getElementById('dash-a-receber');
+    if (aReceberList.length) {
+      const itens = aReceberList.slice(0,8).map(a => `
+        <div class="ar-item ${a.pagamento}">
+          <div class="ar-item-info">
+            <div class="ar-item-name">${a.cliente_nome||'—'}</div>
+            <div class="ar-item-sub">${a.reboque_nome||'—'} · Dev: ${fmtDate(a.devolucao)}</div>
+          </div>
+          <div class="ar-item-badge">${badgePag(a.pagamento)} ${badgeSt(statusReal(a))}</div>
+          <div class="ar-item-val">${fmt(a.total)}</div>
+        </div>`).join('');
+      arEl.innerHTML = `
+      <div class="ar-panel"><div class="ar-panel-inner">
         <div class="ar-left">
           <div class="ar-left-tag">A Receber</div>
           <div class="ar-left-val">${fmt(aReceberTotal)}</div>
           <div class="ar-left-sub">${aReceberList.length} aluguel(s) pendente(s)</div>
           <div class="ar-split">
-            <div class="ar-split-item">
-              <div class="ar-split-label">Pendente</div>
-              <div class="ar-split-val pendente">${fmt(aReceberPendente)}</div>
-            </div>
-            <div class="ar-split-item">
-              <div class="ar-split-label">Parcial</div>
-              <div class="ar-split-val parcial">${fmt(aReceberParcial)}</div>
-            </div>
+            <div class="ar-split-item"><div class="ar-split-label">Pendente</div><div class="ar-split-val pendente">${fmt(aRecPend)}</div></div>
+            <div class="ar-split-item"><div class="ar-split-label">Parcial</div><div class="ar-split-val parcial">${fmt(aRecParc)}</div></div>
           </div>
         </div>
         <div class="ar-right">
           <div class="ar-right-title">Aluguéis com pagamento pendente ou parcial</div>
           <div class="ar-list">${itens}</div>
-          ${mais}
+          ${aReceberList.length>8?`<div style="text-align:center;padding:8px;font-size:11px;color:rgba(255,255,255,.35)">+${aReceberList.length-8} registro(s). <a href="#" onclick="goTo('alugueis')" style="color:var(--org-l)">Ver todos →</a></div>`:''}
         </div>
-      </div>
-    </div>`;
-  } else {
-    arEl.innerHTML='';
+      </div></div>`;
+    } else { arEl.innerHTML = ''; }
+
+    // Últimos aluguéis
+    const rec = al.slice(0,5);
+    document.getElementById('dash-recent').innerHTML = rec.length ? rec.map(a => {
+      const st = statusReal(a);
+      const dotC = st==='ativo'?'var(--org)':st==='atrasado'?'var(--red)':'var(--muted)';
+      return `<div class="act-item"><div class="act-dot" style="background:${dotC}"></div><div class="act-text"><strong>${a.cliente_nome||'—'}</strong> — ${a.reboque_nome||'—'}</div><div class="act-right">${badgeSt(st)} ${badgePag(a.pagamento)}</div></div>`;
+    }).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Nenhum aluguel registrado.</div>';
+
+    // Devoluções hoje
+    const devHoje = al.filter(a => a.status==='ativo' && a.devolucao===today());
+    document.getElementById('dash-dev-hoje').innerHTML = devHoje.length ? devHoje.map(a =>
+      `<div class="act-item"><div class="act-dot" style="background:var(--amb)"></div><div class="act-text"><strong>${a.cliente_nome||'—'}</strong> — ${a.reboque_nome||'—'}</div><span style="font-size:11px;font-weight:700;color:var(--amb)">HOJE</span></div>`
+    ).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Nenhuma devolução prevista hoje.</div>';
+
+    // Disponíveis
+    const disp = rb.filter(r => r.status==='disponivel');
+    document.getElementById('dash-disponiveis').innerHTML = disp.length ? disp.slice(0,5).map(r =>
+      `<div class="act-item"><div class="act-dot" style="background:var(--grn)"></div><div class="act-text"><strong>${r.nome}</strong> ${r.placa?`<span style="color:var(--muted)">${r.placa}</span>`:''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--org)">${fmt(r.diaria)}/dia</span></div>`
+    ).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Todos os reboques estão locados.</div>';
+
+    updateNavBadges();
+  } catch (e) {
+    toast(e.message, 'error');
   }
-
-  // Últimos aluguéis
-  const rec=al.slice(-5).reverse();
-  document.getElementById('dash-recent').innerHTML = rec.length ? rec.map(a=>{
-    const c=cl.find(x=>x.id===a.cliId)||{nome:'—'};
-    const r=rb.find(x=>x.id===a.rbId)||{nome:'—'};
-    const st=statusReal(a);
-    const dotC=st==='ativo'?'var(--org)':st==='atrasado'?'var(--red)':'var(--muted)';
-    return `<div class="act-item"><div class="act-dot" style="background:${dotC}"></div><div class="act-text"><strong>${c.nome}</strong> — ${r.nome}</div><div class="act-right">${badgeSt(st)} ${badgePag(a.pag)}</div></div>`
-  }).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Nenhum aluguel registrado.</div>';
-
-  // Devoluções hoje
-  const devHoje=al.filter(a=>a.status==='ativo'&&a.dev===t);
-  document.getElementById('dash-dev-hoje').innerHTML = devHoje.length ? devHoje.map(a=>{
-    const c=cl.find(x=>x.id===a.cliId)||{nome:'—'};
-    const r=rb.find(x=>x.id===a.rbId)||{nome:'—'};
-    return `<div class="act-item"><div class="act-dot" style="background:var(--amb)"></div><div class="act-text"><strong>${c.nome}</strong> — ${r.nome}</div><span style="font-size:11px;font-weight:700;color:var(--amb)">HOJE</span></div>`
-  }).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Nenhuma devolução prevista hoje.</div>';
-
-  // Disponíveis
-  document.getElementById('dash-disponiveis').innerHTML = disponiveis.length ? disponiveis.slice(0,5).map(r=>`
-    <div class="act-item"><div class="act-dot" style="background:var(--grn)"></div><div class="act-text"><strong>${r.nome}</strong> ${r.placa?`<span style="color:var(--muted)">${r.placa}</span>`:''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:14px;color:var(--org)">${fmt(r.diaria)}/dia</span></div>`
-  ).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Todos os reboques estão locados.</div>';
-
-  updateNavBadges();
 }
 
-/* ══════════════════════════════════════
-   ALUGUÉIS — render
-══════════════════════════════════════ */
-function renderAlugueis(){
-  const al=DB.get(KEY.al), cl=DB.get(KEY.cl), rb=DB.get(KEY.rb);
-  const search=(document.getElementById('al-search')?.value||'').toLowerCase();
-  const fSt=document.getElementById('al-filter-status')?.value||'';
-  const fPag=document.getElementById('al-filter-pag')?.value||'';
+/* ══════════════════════════════════════════════════════
+   ALUGUÉIS
+══════════════════════════════════════════════════════ */
+let _alCache = [];
 
-  const ativos=al.filter(a=>a.status==='ativo').length;
-  const atrasados=al.filter(isAtrasado).length;
-  const encerrados=al.filter(a=>a.status==='encerrado').length;
+async function renderAlugueis() {
+  setLoading('lista-alugueis','Carregando aluguéis...');
+  try {
+    _alCache = await api.get('/api/alugueis');
+    _filtrarAlugueis();
+  } catch(e) { toast(e.message,'error'); }
+}
 
-  document.getElementById('qs-alugueis').innerHTML=`
+function _filtrarAlugueis() {
+  const search  = (document.getElementById('al-search')?.value||'').toLowerCase();
+  const fSt     = document.getElementById('al-filter-status')?.value||'';
+  const fPag    = document.getElementById('al-filter-pag')?.value||'';
+
+  const ativos     = _alCache.filter(a=>a.status==='ativo').length;
+  const atrasados  = _alCache.filter(a=>isAtrasado(a)).length;
+  const encerrados = _alCache.filter(a=>a.status==='encerrado').length;
+
+  document.getElementById('qs-alugueis').innerHTML = `
     <div class="qs-card" style="border-left-color:var(--org)"><div class="qs-label">Ativos</div><div class="qs-val">${ativos}</div></div>
     <div class="qs-card" style="border-left-color:var(--red)"><div class="qs-label">Atrasados</div><div class="qs-val">${atrasados}</div></div>
     <div class="qs-card" style="border-left-color:var(--muted)"><div class="qs-label">Encerrados</div><div class="qs-val">${encerrados}</div></div>
   `;
 
-  let list=[...al].reverse();
-  if(search) list=list.filter(a=>{
-    const c=cl.find(x=>x.id===a.cliId);
-    const r=rb.find(x=>x.id===a.rbId);
-    return (c&&c.nome.toLowerCase().includes(search))||(r&&r.nome.toLowerCase().includes(search));
-  });
-  if(fSt) list=list.filter(a=>statusReal(a)===fSt);
-  if(fPag) list=list.filter(a=>a.pag===fPag);
+  let list = [..._alCache];
+  if (search) list = list.filter(a =>
+    (a.cliente_nome||'').toLowerCase().includes(search) ||
+    (a.reboque_nome||'').toLowerCase().includes(search)
+  );
+  if (fSt)  list = list.filter(a => statusReal(a) === fSt);
+  if (fPag) list = list.filter(a => a.pagamento === fPag);
 
-  const el=document.getElementById('lista-alugueis');
-  if(!list.length){
-    el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5"/></svg><div class="empty-t">Nenhum Aluguel</div><div class="empty-s">Tente ajustar os filtros ou crie um novo aluguel</div></div>`;
+  const el = document.getElementById('lista-alugueis');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778"/></svg><div class="empty-t">Nenhum Aluguel</div><div class="empty-s">Tente ajustar os filtros ou crie um novo aluguel</div></div>`;
     return;
   }
-  el.innerHTML=list.map(a=>{
-    const c=cl.find(x=>x.id===a.cliId)||{nome:'Cliente não encontrado'};
-    const r=rb.find(x=>x.id===a.rbId)||{nome:'Reboque não encontrado',placa:''};
-    const st=statusReal(a);
-    const d=diasEnteTotal(a.saida,a.dev);
+  el.innerHTML = list.map(a => {
+    const st = statusReal(a);
+    const d  = diasEnteTotal(a.saida, a.devolucao);
     return `
     <div class="al-card c-${st}">
       <div class="al-card-inner">
         <div>
-          <div class="al-name">${c.nome}</div>
-          <div class="al-sub">${r.nome}${r.placa?' · '+r.placa:''}</div>
+          <div class="al-name">${a.cliente_nome||'—'}</div>
+          <div class="al-sub">${a.reboque_nome||'—'}${a.reboque_placa?' · '+a.reboque_placa:''}</div>
           <div class="al-meta">
-            <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Saída: <strong>${fmtDate(a.saida)}</strong></div>
-            <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Devolução: <strong>${fmtDate(a.dev)}</strong></div>
+            <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Saída: <strong>${fmtDate(a.saida)}</strong></div>
+            <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Devolução: <strong>${fmtDate(a.devolucao)}</strong></div>
             <div class="al-meta-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> <strong>${d} dia${d!==1?'s':''}</strong></div>
           </div>
         </div>
         <div class="al-right">
-          <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${badgeSt(st)} ${badgePag(a.pag)}</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${badgeSt(st)} ${badgePag(a.pagamento)}</div>
           <div class="al-valor">${fmt(a.total)}</div>
           <div class="al-btns">
-            <button class="btn btn-ghost btn-xs" onclick="verAluguel('${a.id}')">
-              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Ver
-            </button>
-            <button class="btn btn-ghost btn-xs" onclick="editarAluguel('${a.id}')">
-              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              Editar
-            </button>
+            <button class="btn btn-ghost btn-xs" onclick="verAluguel('${a.id}')"><svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Ver</button>
+            <button class="btn btn-ghost btn-xs" onclick="editarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
             ${st!=='encerrado'?`<button class="btn btn-grn btn-xs" onclick="encerrarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>`:''}
             <button class="btn btn-red btn-xs" onclick="excluirAluguel('${a.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
           </div>
         </div>
       </div>
-    </div>`
+    </div>`;
   }).join('');
   updateNavBadges();
 }
 
-function diasEnteTotal(s,e){
-  try{return Math.max(1,Math.round((new Date(e)-new Date(s))/86400000))}catch{return 1}
-}
-
-/* ══════════════════════════════════════
-   ALUGUEL — CRUD
-══════════════════════════════════════ */
-function abrirModalAluguel(reboqueIdPresel){
-  const al=DB.get(KEY.al);
-  const cl=DB.get(KEY.cl);
-  const rb=DB.get(KEY.rb);
-  const alugadosIds=al.filter(a=>a.status==='ativo').map(a=>a.rbId);
-
-  document.getElementById('al-id').value='';
-  document.getElementById('modal-aluguel-titulo').textContent='Novo Aluguel';
-  document.getElementById('al-saida').value=today();
-  const amanha=new Date();amanha.setDate(amanha.getDate()+1);
-  document.getElementById('al-devolucao').value=amanha.toISOString().slice(0,10);
-  document.getElementById('al-pagamento').value='pendente';
-  document.getElementById('al-status').value='ativo';
-  document.getElementById('al-obs').value='';
-
-  // Popula clientes
-  document.getElementById('al-cliente-sel').innerHTML=
-    `<option value="">Selecionar cliente...</option>`+
-    cl.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
-
-  // Popula reboques disponíveis
-  const disponiveisRb=rb.filter(r=>r.status!=='manutencao'&&!alugadosIds.includes(r.id));
-  document.getElementById('al-reboque-sel').innerHTML=
-    `<option value="">Selecionar reboque...</option>`+
-    disponiveisRb.map(r=>`<option value="${r.id}">${r.nome} — ${fmt(r.diaria)}/dia${r.placa?' ('+r.placa+')':''}</option>`).join('');
-
-  if(reboqueIdPresel){
-    document.getElementById('al-reboque-sel').value=reboqueIdPresel;
-    const r=rb.find(x=>x.id===reboqueIdPresel);
-    if(r){document.getElementById('al-diaria').value=r.diaria;}
-  } else {
-    const cfg=DB.getObj(KEY.cfg,{diaria:70});
-    document.getElementById('al-diaria').value=cfg.diaria||70;
-  }
-
-  document.getElementById('al-reboque-sel').onchange=function(){
-    const r=rb.find(x=>x.id===this.value);
-    if(r) document.getElementById('al-diaria').value=r.diaria;
-    calcAluguel();
-  };
-
-  calcAluguel();
+async function abrirModalAluguel(reboqueIdPresel) {
+  document.getElementById('al-id').value = '';
+  document.getElementById('modal-aluguel-titulo').textContent = 'Novo Aluguel';
+  document.getElementById('al-saida').value    = today();
+  const amanha = new Date(); amanha.setDate(amanha.getDate()+1);
+  document.getElementById('al-devolucao').value = amanha.toISOString().slice(0,10);
+  document.getElementById('al-pagamento').value = 'pendente';
+  document.getElementById('al-status').value    = 'ativo';
+  document.getElementById('al-obs').value       = '';
+  document.getElementById('al-diaria').value    = 70;
+  document.getElementById('al-cliente-sel').innerHTML = '<option>Carregando...</option>';
+  document.getElementById('al-reboque-sel').innerHTML = '<option>Carregando...</option>';
   abrirModal('modal-aluguel');
-}
 
-function calcAluguel(){
-  const s=document.getElementById('al-saida').value;
-  const e=document.getElementById('al-devolucao').value;
-  const d=Number(document.getElementById('al-diaria').value)||0;
-  if(s&&e&&new Date(e)>new Date(s)){
-    const n=diasEnteTotal(s,e);
-    document.getElementById('al-dias').value=n;
-    document.getElementById('al-total').value=(n*d).toFixed(0);
-  } else {
-    document.getElementById('al-dias').value=1;
-    document.getElementById('al-total').value=d;
-  }
-}
-
-function salvarAluguel(){
-  const cliId=document.getElementById('al-cliente-sel').value;
-  const rbId=document.getElementById('al-reboque-sel').value;
-  const saida=document.getElementById('al-saida').value;
-  const dev=document.getElementById('al-devolucao').value;
-  const diaria=Number(document.getElementById('al-diaria').value);
-  const total=Number(document.getElementById('al-total').value);
-  const pag=document.getElementById('al-pagamento').value;
-  const status=document.getElementById('al-status').value;
-  const obs=document.getElementById('al-obs').value;
-
-  if(!cliId){toast('Selecione um cliente','error');return}
-  if(!rbId){toast('Selecione um reboque','error');return}
-  if(!saida||!dev){toast('Preencha as datas','error');return}
-  if(new Date(dev)<=new Date(saida)){toast('Data de devolução deve ser posterior à saída','error');return}
-
-  const editId=document.getElementById('al-id').value;
-  const al=DB.get(KEY.al);
-  const rb=DB.get(KEY.rb);
-
-  if(editId){
-    const idx=al.findIndex(a=>a.id===editId);
-    if(idx>=0){
-      const oldRbId=al[idx].rbId;
-      const cNome=DB.get(KEY.cl).find(x=>x.id===cliId)?.nome||cliId;
-      const rNome=DB.get(KEY.rb).find(x=>x.id===rbId)?.nome||rbId;
-      al[idx]={...al[idx],cliId,rbId,saida,dev,diaria,total,pag,status,obs};
-      if(oldRbId!==rbId){
-        const oi=rb.findIndex(r=>r.id===oldRbId);
-        if(oi>=0&&rb[oi].status==='alugado') rb[oi].status='disponivel';
-        if(status==='ativo'){const ni=rb.findIndex(r=>r.id===rbId);if(ni>=0)rb[ni].status='alugado';}
-        DB.set(KEY.rb,rb);
-      }
-      auditLog('editar','Aluguel',`Aluguel editado — Cliente: ${cNome}`,`Reboque: ${rNome} · Saída: ${fmtDate(saida)} · Dev: ${fmtDate(dev)} · Total: ${fmt(total)} · Pag: ${pag}`);
+  try {
+    const [cl, rb, al] = await Promise.all([
+      api.get('/api/clientes'),
+      api.get('/api/reboques'),
+      api.get('/api/alugueis'),
+    ]);
+    const alugadosIds = al.filter(a=>a.status==='ativo').map(a=>a.reboque_id);
+    document.getElementById('al-cliente-sel').innerHTML =
+      `<option value="">Selecionar cliente...</option>` +
+      cl.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');
+    const dispRb = rb.filter(r=>r.status!=='manutencao'&&!alugadosIds.includes(r.id));
+    document.getElementById('al-reboque-sel').innerHTML =
+      `<option value="">Selecionar reboque...</option>` +
+      dispRb.map(r=>`<option value="${r.id}">${r.nome} — ${fmt(r.diaria)}/dia${r.placa?' ('+r.placa+')':''}</option>`).join('');
+    if (reboqueIdPresel) {
+      document.getElementById('al-reboque-sel').value = reboqueIdPresel;
+      const r = rb.find(x=>x.id===reboqueIdPresel);
+      if (r) document.getElementById('al-diaria').value = r.diaria;
     }
-    toast('Aluguel atualizado!','success');
-  } else {
-    const cNome=DB.get(KEY.cl).find(x=>x.id===cliId)?.nome||cliId;
-    const rNome=DB.get(KEY.rb).find(x=>x.id===rbId)?.nome||rbId;
-    const novo={id:DB.uid(),cliId,rbId,saida,dev,diaria,total,pag,status,obs,criado:today()};
-    al.push(novo);
-    if(status==='ativo'){
-      const ri=rb.findIndex(r=>r.id===rbId);
-      if(ri>=0) rb[ri].status='alugado';
-      DB.set(KEY.rb,rb);
-    }
-    auditLog('criar','Aluguel',`Novo aluguel criado — Cliente: ${cNome}`,`Reboque: ${rNome} · Saída: ${fmtDate(saida)} · Dev: ${fmtDate(dev)} · Total: ${fmt(total)} · Pag: ${pag}`);
-    toast('Aluguel criado!','success');
-  }
-  DB.set(KEY.al,al);
-  fecharModal('modal-aluguel');
-  renderAlugueis();
-  renderDashboard();
-}
-
-function editarAluguel(id){
-  const al=DB.get(KEY.al);
-  const a=al.find(x=>x.id===id);
-  if(!a) return;
-  const cl=DB.get(KEY.cl);
-  const rb=DB.get(KEY.rb);
-  const alugadosIds=al.filter(x=>x.status==='ativo'&&x.id!==id).map(x=>x.rbId);
-
-  document.getElementById('al-id').value=id;
-  document.getElementById('modal-aluguel-titulo').textContent='Editar Aluguel';
-
-  document.getElementById('al-cliente-sel').innerHTML=
-    `<option value="">Selecionar cliente...</option>`+
-    cl.map(c=>`<option value="${c.id}"${c.id===a.cliId?' selected':''}>${c.nome}</option>`).join('');
-
-  const disponiveisRb=rb.filter(r=>r.status!=='manutencao'&&(!alugadosIds.includes(r.id)||r.id===a.rbId));
-  document.getElementById('al-reboque-sel').innerHTML=
-    `<option value="">Selecionar reboque...</option>`+
-    disponiveisRb.map(r=>`<option value="${r.id}"${r.id===a.rbId?' selected':''}>${r.nome} — ${fmt(r.diaria)}/dia</option>`).join('');
-
-  document.getElementById('al-reboque-sel').onchange=function(){
-    const r=rb.find(x=>x.id===this.value);
-    if(r) document.getElementById('al-diaria').value=r.diaria;
+    document.getElementById('al-reboque-sel').onchange = function() {
+      const r = rb.find(x=>x.id===this.value);
+      if (r) document.getElementById('al-diaria').value = r.diaria;
+      calcAluguel();
+    };
     calcAluguel();
-  };
-
-  document.getElementById('al-saida').value=a.saida;
-  document.getElementById('al-devolucao').value=a.dev;
-  document.getElementById('al-diaria').value=a.diaria;
-  document.getElementById('al-pagamento').value=a.pag;
-  document.getElementById('al-status').value=a.status;
-  document.getElementById('al-obs').value=a.obs||'';
-  calcAluguel();
-  abrirModal('modal-aluguel');
+  } catch(e) { toast(e.message,'error'); fecharModal('modal-aluguel'); }
 }
 
-function verAluguel(id){
-  const al=DB.get(KEY.al);
-  const a=al.find(x=>x.id===id);if(!a)return;
-  const cl=DB.get(KEY.cl);
-  const rb=DB.get(KEY.rb);
-  const c=cl.find(x=>x.id===a.cliId)||{nome:'—',tel:'—',email:'—'};
-  const r=rb.find(x=>x.id===a.rbId)||{nome:'—',placa:'',tipo:''};
-  const st=statusReal(a);
-  const d=diasEnteTotal(a.saida,a.dev);
+function calcAluguel() {
+  const s = document.getElementById('al-saida').value;
+  const e = document.getElementById('al-devolucao').value;
+  const d = Number(document.getElementById('al-diaria').value)||0;
+  if (s && e && new Date(e) > new Date(s)) {
+    const n = diasEnteTotal(s, e);
+    document.getElementById('al-dias').value  = n;
+    document.getElementById('al-total').value = (n*d).toFixed(0);
+  } else {
+    document.getElementById('al-dias').value  = 1;
+    document.getElementById('al-total').value = d;
+  }
+}
 
-  document.getElementById('detalhe-body').innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--blu);letter-spacing:1px">${c.nome}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:3px">${c.tel}${c.email?' · '+c.email:''}</div>
+async function salvarAluguel() {
+  const id        = document.getElementById('al-id').value;
+  const cliente_id= document.getElementById('al-cliente-sel').value;
+  const reboque_id= document.getElementById('al-reboque-sel').value;
+  const saida     = document.getElementById('al-saida').value;
+  const devolucao = document.getElementById('al-devolucao').value;
+  const diaria    = Number(document.getElementById('al-diaria').value);
+  const total     = Number(document.getElementById('al-total').value);
+  const pagamento = document.getElementById('al-pagamento').value;
+  const status    = document.getElementById('al-status').value;
+  const obs       = document.getElementById('al-obs').value;
+
+  if (!cliente_id) { toast('Selecione um cliente','error'); return; }
+  if (!reboque_id) { toast('Selecione um reboque','error'); return; }
+  if (!saida||!devolucao) { toast('Preencha as datas','error'); return; }
+  if (new Date(devolucao) <= new Date(saida)) { toast('Data de devolução deve ser posterior à saída','error'); return; }
+
+  try {
+    if (id) {
+      await api.put(`/api/alugueis/${id}`, {cliente_id,reboque_id,saida,devolucao,diaria,total,pagamento,status,obs});
+      toast('Aluguel atualizado!','success');
+    } else {
+      await api.post('/api/alugueis', {cliente_id,reboque_id,saida,devolucao,diaria,total,pagamento,obs});
+      toast('Aluguel criado!','success');
+    }
+    fecharModal('modal-aluguel');
+    await renderAlugueis();
+    renderDashboard();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function editarAluguel(id) {
+  try {
+    const a = await api.get(`/api/alugueis/${id}`);
+    const [cl, rb, al] = await Promise.all([api.get('/api/clientes'), api.get('/api/reboques'), api.get('/api/alugueis')]);
+    const alugadosIds = al.filter(x=>x.status==='ativo'&&x.id!==id).map(x=>x.reboque_id);
+    document.getElementById('al-id').value = id;
+    document.getElementById('modal-aluguel-titulo').textContent = 'Editar Aluguel';
+    document.getElementById('al-cliente-sel').innerHTML =
+      `<option value="">Selecionar cliente...</option>` + cl.map(c=>`<option value="${c.id}"${c.id===a.cliente_id?' selected':''}>${c.nome}</option>`).join('');
+    const dispRb = rb.filter(r=>r.status!=='manutencao'&&(!alugadosIds.includes(r.id)||r.id===a.reboque_id));
+    document.getElementById('al-reboque-sel').innerHTML =
+      `<option value="">Selecionar reboque...</option>` + dispRb.map(r=>`<option value="${r.id}"${r.id===a.reboque_id?' selected':''}>${r.nome} — ${fmt(r.diaria)}/dia</option>`).join('');
+    document.getElementById('al-reboque-sel').onchange = function() {
+      const r = rb.find(x=>x.id===this.value);
+      if (r) document.getElementById('al-diaria').value = r.diaria;
+      calcAluguel();
+    };
+    document.getElementById('al-saida').value     = a.saida;
+    document.getElementById('al-devolucao').value = a.devolucao;
+    document.getElementById('al-diaria').value    = a.diaria;
+    document.getElementById('al-pagamento').value = a.pagamento;
+    document.getElementById('al-status').value    = a.status;
+    document.getElementById('al-obs').value       = a.obs||'';
+    calcAluguel();
+    abrirModal('modal-aluguel');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function verAluguel(id) {
+  try {
+    const a = await api.get(`/api/alugueis/${id}`);
+    const st = statusReal(a);
+    const d  = diasEnteTotal(a.saida, a.devolucao);
+    document.getElementById('detalhe-body').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--blu);letter-spacing:1px">${a.cliente_nome||'—'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">${a.cliente_tel||''}</div>
+        </div>
+        <div style="display:flex;gap:6px">${badgeSt(st)} ${badgePag(a.pagamento)}</div>
       </div>
-      <div style="display:flex;gap:6px">${badgeSt(st)} ${badgePag(a.pag)}</div>
-    </div>
-    <div style="background:var(--bg);padding:14px 16px;margin-bottom:16px;border-left:3px solid var(--org)">
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--blu);text-transform:uppercase">${r.nome}</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">${r.tipo}${r.placa?' · '+r.placa:''}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
-      ${[['Saída',fmtDate(a.saida)],['Devolução',fmtDate(a.dev)],['Período',d+' dia(s)'],['Diária',fmt(a.diaria)]].map(([l,v])=>`
-        <div style="background:var(--bg);padding:12px 14px">
-          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${l}</div>
-          <div style="font-weight:700;font-size:14px">${v}</div>
-        </div>`).join('')}
-    </div>
-    <div style="background:var(--blu);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <span style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase">Valor Total</span>
-      <span style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--org);letter-spacing:1px">${fmt(a.total)}</span>
-    </div>
-    ${a.obs?`<div style="background:var(--bg);padding:12px 14px"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Observações</div><div style="font-size:13px">${a.obs}</div></div>`:''}
-  `;
-  document.getElementById('detalhe-ft').innerHTML=`
-    <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>
-    <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe');editarAluguel('${a.id}')">
-      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      Editar
-    </button>
-    ${st!=='encerrado'?`<button class="btn btn-grn" onclick="fecharModal('modal-detalhe');encerrarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>`:''}
-  `;
-  abrirModal('modal-detalhe');
+      <div style="background:var(--bg);padding:14px 16px;margin-bottom:16px;border-left:3px solid var(--org)">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--blu);text-transform:uppercase">${a.reboque_nome||'—'}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${a.reboque_tipo||''}${a.reboque_placa?' · '+a.reboque_placa:''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+        ${[['Saída',fmtDate(a.saida)],['Devolução',fmtDate(a.devolucao)],['Período',d+' dia(s)'],['Diária',fmt(a.diaria)]].map(([l,v])=>`
+          <div style="background:var(--bg);padding:12px 14px">
+            <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${l}</div>
+            <div style="font-weight:700;font-size:14px">${v}</div>
+          </div>`).join('')}
+      </div>
+      <div style="background:var(--blu);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase">Valor Total</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--org);letter-spacing:1px">${fmt(a.total)}</span>
+      </div>
+      ${a.obs?`<div style="background:var(--bg);padding:12px 14px"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Observações</div><div style="font-size:13px">${a.obs}</div></div>`:''}
+    `;
+    document.getElementById('detalhe-ft').innerHTML = `
+      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>
+      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe');editarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
+      ${st!=='encerrado'?`<button class="btn btn-grn" onclick="fecharModal('modal-detalhe');encerrarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>`:''}
+    `;
+    abrirModal('modal-detalhe');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function encerrarAluguel(id){
-  const al=DB.get(KEY.al);
-  const a=al.find(x=>x.id===id);
-  if(!a) return;
-
-  if(a.pag!=='pago'){
-    toast('Pagamento pendente! Marque o aluguel como "Pago" antes de encerrar.','error');
-    return;
+async function encerrarAluguel(id) {
+  const a = _alCache.find(x=>x.id===id) || await api.get(`/api/alugueis/${id}`).catch(()=>null);
+  if (a && a.pagamento !== 'pago') {
+    toast('Pagamento pendente! Marque o aluguel como "Pago" antes de encerrar.','error'); return;
   }
-
-  confirmar('Encerrar Aluguel','Confirma o encerramento deste aluguel? O reboque será liberado para novas locações.',()=>{
-    const al=DB.get(KEY.al);
-    const rb=DB.get(KEY.rb);
-    const idx=al.findIndex(a=>a.id===id);if(idx<0)return;
-    const rbId=al[idx].rbId;
-    const cNome=DB.get(KEY.cl).find(x=>x.id===al[idx].cliId)?.nome||'—';
-    const rNome=rb.find(x=>x.id===rbId)?.nome||'—';
-    al[idx].status='encerrado';
-    DB.set(KEY.al,al);
-    const ri=rb.findIndex(r=>r.id===rbId);
-    if(ri>=0&&rb[ri].status==='alugado'){rb[ri].status='disponivel';DB.set(KEY.rb,rb);}
-    auditLog('encerrar','Aluguel',`Aluguel encerrado — Cliente: ${cNome}`,`Reboque: ${rNome} liberado`);
-    toast('Aluguel encerrado. Reboque liberado.','success');
-    renderAlugueis();renderDashboard();renderReboques();
-  },false);
+  confirmar('Encerrar Aluguel','Confirma o encerramento? O reboque será liberado.', async () => {
+    try {
+      await api.post(`/api/alugueis/${id}/encerrar`);
+      toast('Aluguel encerrado. Reboque liberado.','success');
+      await renderAlugueis(); renderDashboard(); renderReboques();
+    } catch(e) { toast(e.message,'error'); }
+  }, false);
 }
 
-function excluirAluguel(id){
-  confirmar('Excluir Aluguel','Esta ação não pode ser desfeita. Deseja excluir este aluguel?',()=>{
-    const al=DB.get(KEY.al);
-    const rb=DB.get(KEY.rb);
-    const a=al.find(x=>x.id===id);
-    const cNome=a?DB.get(KEY.cl).find(x=>x.id===a.cliId)?.nome||'—':'—';
-    const rNome=a?rb.find(x=>x.id===a.rbId)?.nome||'—':'—';
-    if(a&&a.status==='ativo'){
-      const ri=rb.findIndex(r=>r.id===a.rbId);
-      if(ri>=0&&rb[ri].status==='alugado'){rb[ri].status='disponivel';DB.set(KEY.rb,rb);}
-    }
-    DB.set(KEY.al,al.filter(x=>x.id!==id));
-    auditLog('excluir','Aluguel',`Aluguel excluído — Cliente: ${cNome}`,`Reboque: ${rNome} · Total: ${a?fmt(a.total):'—'}`);
-    toast('Aluguel excluído.','info');
-    renderAlugueis();renderDashboard();
+async function excluirAluguel(id) {
+  confirmar('Excluir Aluguel','Esta ação não pode ser desfeita. Deseja excluir este aluguel?', async () => {
+    try {
+      await api.del(`/api/alugueis/${id}`);
+      toast('Aluguel excluído.','info');
+      await renderAlugueis(); renderDashboard();
+    } catch(e) { toast(e.message,'error'); }
   });
 }
 
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    DEVOLUÇÕES
-══════════════════════════════════════ */
-function renderDevolucoes(){
-  const al=DB.get(KEY.al);
-  const cl=DB.get(KEY.cl);
-  const rb=DB.get(KEY.rb);
-  const t=today();
-
-  const devolvendo=al.filter(a=>a.status==='ativo').sort((a,b)=>a.dev.localeCompare(b.dev));
-  const el=document.getElementById('lista-devolucoes');
-
-  if(!devolvendo.length){
-    el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.38"/></svg><div class="empty-t">Nenhum Aluguel Ativo</div><div class="empty-s">Não há aluguéis ativos no momento</div></div>`;
-    return;
-  }
-
-  const atrasados=devolvendo.filter(a=>a.dev<t);
-  const hoje_=devolvendo.filter(a=>a.dev===t);
-  const proximos=devolvendo.filter(a=>a.dev>t);
-
-  const renderGroup=(title,list,cor)=>list.length?`
-    <div style="margin-bottom:20px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${cor};margin-bottom:10px;display:flex;align-items:center;gap:8px">
-        <span style="display:block;width:12px;height:2px;background:${cor}"></span>${title} (${list.length})
-      </div>
-      ${list.map(a=>{
-        const c=cl.find(x=>x.id===a.cliId)||{nome:'—',tel:'—'};
-        const r=rb.find(x=>x.id===a.rbId)||{nome:'—',placa:''};
-        const st=statusReal(a);
-        const atrD=a.dev<t?diasEnteTotal(a.dev,t):0;
-        return `
-        <div class="al-card c-${st}">
-          <div class="al-card-inner">
-            <div>
-              <div class="al-name">${c.nome}</div>
-              <div class="al-sub">${r.nome}${r.placa?' · '+r.placa:''} · Tel: ${c.tel}</div>
-              <div class="al-meta">
-                <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Saída: <strong>${fmtDate(a.saida)}</strong></div>
-                <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Prev. devolução: <strong style="color:${cor}">${fmtDate(a.dev)}</strong></div>
-                ${atrD>0?`<div class="al-meta-item" style="color:var(--red)"><strong>${atrD} dia(s) de atraso</strong></div>`:''}
-              </div>
-            </div>
-            <div class="al-right">
-              ${badgeSt(st)}
-              <div class="al-valor">${fmt(a.total)}</div>
-              <div class="al-btns">
-                <button class="btn btn-grn btn-xs" onclick="encerrarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>
-                <button class="btn btn-ghost btn-xs" onclick="verAluguel('${a.id}')">Ver</button>
-              </div>
-            </div>
-          </div>
-        </div>`}).join('')}
-    </div>`:''
-  ;
-  el.innerHTML=renderGroup('Atrasados',atrasados,'var(--red)')+renderGroup('Para Hoje',hoje_,'var(--amb)')+renderGroup('Próximos',proximos,'var(--grn)');
-  updateNavBadges();
-}
-
-/* ══════════════════════════════════════
-   REBOQUES
-══════════════════════════════════════ */
-function renderReboques(){
-  const rb=DB.get(KEY.rb);
-  const al=DB.get(KEY.al);
-  const cl=DB.get(KEY.cl);
-  const search=(document.getElementById('rb-search')?.value||'').toLowerCase();
-  const fSt=document.getElementById('rb-filter')?.value||'';
-
-  let list=[...rb];
-  if(search) list=list.filter(r=>r.nome.toLowerCase().includes(search)||(r.placa||'').toLowerCase().includes(search));
-  if(fSt) list=list.filter(r=>r.status===fSt);
-
-  const el=document.getElementById('lista-reboques');
-  if(!list.length){
-    el.innerHTML=`<div class="empty" style="grid-column:1/-1"><svg viewBox="0 0 24 24"><rect x="1" y="8" width="13" height="9" rx="1"/><path d="M14 10h4l3 3v4h-7V10z"/></svg><div class="empty-t">Nenhum Reboque</div><div class="empty-s">Adicione um novo reboque à frota</div></div>`;
-    return;
-  }
-
-  el.innerHTML=list.map(r=>{
-    const bgC=tipoBg[r.tipo]||'#0A2647';
-    const ico=tipoIconSVG[r.tipo]||tipoIconSVG['Aberto'];
-    const aAtivo=al.find(a=>a.rbId===r.id&&a.status==='ativo');
-    const locatario=aAtivo?cl.find(c=>c.id===aAtivo.cliId):null;
-    return `
-    <div class="rb-card">
-      <div class="rb-card-top" style="background:${bgC}">
-        ${ico}
-        <div class="rb-top-badge">${badgeSt(r.status)}</div>
-      </div>
-      <div class="rb-body">
-        <div class="rb-name">${r.nome}</div>
-        <div class="rb-placa">${r.tipo}${r.placa?' · '+r.placa:''}</div>
-        ${locatario?`<div class="rb-locatario">Com: ${locatario.nome}</div>`:''}
-        ${r.cap?`<div style="font-size:11px;color:var(--muted);margin-top:2px">Cap: ${r.cap}kg</div>`:''}
-        <div class="rb-price-lbl">Diária</div>
-        <div class="rb-price">${fmt(r.diaria)}</div>
-        <div class="rb-btns">
-          ${r.status==='disponivel'?`<button class="btn btn-primary btn-xs" onclick="abrirModalAluguel('${r.id}')"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778"/></svg>Alugar</button>`:''}
-          <button class="btn btn-ghost btn-xs" onclick="abrirModalReboque('${r.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
-          <button class="btn btn-red btn-xs" onclick="excluirReboque('${r.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+══════════════════════════════════════════════════════ */
+async function renderDevolucoes() {
+  setLoading('lista-devolucoes','Carregando devoluções...');
+  try {
+    const al = await api.get('/api/alugueis');
+    const t  = today();
+    const devolvendo = al.filter(a=>a.status==='ativo').sort((a,b)=>a.devolucao.localeCompare(b.devolucao));
+    const el = document.getElementById('lista-devolucoes');
+    if (!devolvendo.length) {
+      el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.38"/></svg><div class="empty-t">Nenhum Aluguel Ativo</div></div>`;
+      return;
+    }
+    const atrasados = devolvendo.filter(a=>a.devolucao<t);
+    const hoje_     = devolvendo.filter(a=>a.devolucao===t);
+    const proximos  = devolvendo.filter(a=>a.devolucao>t);
+    const renderGroup = (title, list, cor) => list.length ? `
+      <div style="margin-bottom:20px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:${cor};margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <span style="display:block;width:12px;height:2px;background:${cor}"></span>${title} (${list.length})
         </div>
-      </div>
-    </div>`
-  }).join('');
+        ${list.map(a => {
+          const st = statusReal(a);
+          const atrD = a.devolucao<t ? diasEnteTotal(a.devolucao,t) : 0;
+          return `
+          <div class="al-card c-${st}">
+            <div class="al-card-inner">
+              <div>
+                <div class="al-name">${a.cliente_nome||'—'}</div>
+                <div class="al-sub">${a.reboque_nome||'—'}${a.reboque_placa?' · '+a.reboque_placa:''} · Tel: ${a.cliente_tel||'—'}</div>
+                <div class="al-meta">
+                  <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Saída: <strong>${fmtDate(a.saida)}</strong></div>
+                  <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Prev. devolução: <strong style="color:${cor}">${fmtDate(a.devolucao)}</strong></div>
+                  ${atrD>0?`<div class="al-meta-item" style="color:var(--red)"><strong>${atrD} dia(s) de atraso</strong></div>`:''}
+                </div>
+              </div>
+              <div class="al-right">
+                ${badgeSt(st)}
+                <div class="al-valor">${fmt(a.total)}</div>
+                <div class="al-btns">
+                  <button class="btn btn-grn btn-xs" onclick="encerrarAluguel('${a.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>
+                  <button class="btn btn-ghost btn-xs" onclick="verAluguel('${a.id}')">Ver</button>
+                </div>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : '';
+    el.innerHTML = renderGroup('Atrasados',atrasados,'var(--red)') + renderGroup('Para Hoje',hoje_,'var(--amb)') + renderGroup('Próximos',proximos,'var(--grn)');
+    updateNavBadges();
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function abrirModalReboque(id){
-  document.getElementById('rb-id').value='';
-  document.getElementById('modal-reboque-titulo').textContent='Novo Reboque';
+/* ══════════════════════════════════════════════════════
+   REBOQUES
+══════════════════════════════════════════════════════ */
+let _rbCache = [];
+
+async function renderReboques() {
+  setLoading('lista-reboques','Carregando reboques...');
+  try {
+    const [rb, al] = await Promise.all([api.get('/api/reboques'), api.get('/api/alugueis')]);
+    _rbCache = rb;
+    const search = (document.getElementById('rb-search')?.value||'').toLowerCase();
+    const fSt    = document.getElementById('rb-filter')?.value||'';
+    let list = [...rb];
+    if (search) list = list.filter(r=>r.nome.toLowerCase().includes(search)||(r.placa||'').toLowerCase().includes(search));
+    if (fSt)   list = list.filter(r=>r.status===fSt);
+    const el = document.getElementById('lista-reboques');
+    if (!list.length) {
+      el.innerHTML=`<div class="empty" style="grid-column:1/-1"><svg viewBox="0 0 24 24"><rect x="1" y="8" width="13" height="9" rx="1"/><path d="M14 10h4l3 3v4h-7V10z"/></svg><div class="empty-t">Nenhum Reboque</div></div>`;
+      return;
+    }
+    el.innerHTML = list.map(r => {
+      const bgC = tipoBg[r.tipo]||'#0A2647';
+      const ico = tipoIconSVG[r.tipo]||tipoIconSVG['Aberto'];
+      const aAtivo = al.find(a=>a.reboque_id===r.id&&a.status==='ativo');
+      return `
+      <div class="rb-card">
+        <div class="rb-card-top" style="background:${bgC}">${ico}<div class="rb-top-badge">${badgeSt(r.status)}</div></div>
+        <div class="rb-body">
+          <div class="rb-name">${r.nome}</div>
+          <div class="rb-placa">${r.tipo}${r.placa?' · '+r.placa:''}</div>
+          ${aAtivo?`<div class="rb-locatario">Com: ${aAtivo.cliente_nome||'—'}</div>`:''}
+          ${r.capacidade?`<div style="font-size:11px;color:var(--muted);margin-top:2px">Cap: ${r.capacidade}kg</div>`:''}
+          <div class="rb-price-lbl">Diária</div>
+          <div class="rb-price">${fmt(r.diaria)}</div>
+          <div class="rb-btns">
+            ${r.status==='disponivel'?`<button class="btn btn-primary btn-xs" onclick="abrirModalAluguel('${r.id}')"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778"/></svg>Alugar</button>`:''}
+            <button class="btn btn-ghost btn-xs" onclick="abrirModalReboque('${r.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
+            <button class="btn btn-red btn-xs" onclick="excluirReboque('${r.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function abrirModalReboque(id) {
+  document.getElementById('rb-id').value = '';
+  document.getElementById('modal-reboque-titulo').textContent = 'Novo Reboque';
   ['rb-nome','rb-placa','rb-obs'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('rb-cap').value='';
-  document.getElementById('rb-diaria').value=DB.getObj(KEY.cfg,{diaria:70}).diaria||70;
-  document.getElementById('rb-tipo').value='Aberto';
-  document.getElementById('rb-status').value='disponivel';
-  if(id){
-    const r=DB.get(KEY.rb).find(x=>x.id===id);
-    if(r){
-      document.getElementById('rb-id').value=id;
-      document.getElementById('modal-reboque-titulo').textContent='Editar Reboque';
-      document.getElementById('rb-nome').value=r.nome;
-      document.getElementById('rb-tipo').value=r.tipo;
-      document.getElementById('rb-placa').value=r.placa||'';
-      document.getElementById('rb-cap').value=r.cap||'';
-      document.getElementById('rb-diaria').value=r.diaria;
-      document.getElementById('rb-status').value=r.status;
-      document.getElementById('rb-obs').value=r.obs||'';
+  document.getElementById('rb-cap').value    = '';
+  document.getElementById('rb-diaria').value = 70;
+  document.getElementById('rb-tipo').value   = 'Aberto';
+  document.getElementById('rb-status').value = 'disponivel';
+  if (id) {
+    const r = _rbCache.find(x=>x.id===id) || await api.get(`/api/reboques`).then(list=>list.find(x=>x.id===id)).catch(()=>null);
+    if (r) {
+      document.getElementById('rb-id').value    = id;
+      document.getElementById('modal-reboque-titulo').textContent = 'Editar Reboque';
+      document.getElementById('rb-nome').value  = r.nome;
+      document.getElementById('rb-tipo').value  = r.tipo;
+      document.getElementById('rb-placa').value = r.placa||'';
+      document.getElementById('rb-cap').value   = r.capacidade||'';
+      document.getElementById('rb-diaria').value= r.diaria;
+      document.getElementById('rb-status').value= r.status;
+      document.getElementById('rb-obs').value   = r.obs||'';
     }
   }
   abrirModal('modal-reboque');
 }
 
-function salvarReboque(){
-  const nome=document.getElementById('rb-nome').value.trim();
-  if(!nome){toast('Informe o nome do reboque','error');return}
-  const diaria=Number(document.getElementById('rb-diaria').value);
-  if(!diaria){toast('Informe a diária','error');return}
-  const obj={nome,tipo:document.getElementById('rb-tipo').value,placa:document.getElementById('rb-placa').value.trim(),cap:document.getElementById('rb-cap').value,diaria,status:document.getElementById('rb-status').value,obs:document.getElementById('rb-obs').value};
-  const id=document.getElementById('rb-id').value;
-  const rb=DB.get(KEY.rb);
-  if(id){
-    const i=rb.findIndex(x=>x.id===id);
-    if(i>=0)rb[i]={...rb[i],...obj};
-    auditLog('editar','Reboque',`Reboque editado: ${nome}`,`Tipo: ${obj.tipo} · Placa: ${obj.placa||'—'} · Diária: ${fmt(diaria)} · Status: ${obj.status}`);
-  } else {
-    rb.push({id:DB.uid(),...obj});
-    auditLog('criar','Reboque',`Novo reboque cadastrado: ${nome}`,`Tipo: ${obj.tipo} · Placa: ${obj.placa||'—'} · Diária: ${fmt(diaria)}`);
-  }
-  DB.set(KEY.rb,rb);
-  fecharModal('modal-reboque');
-  renderReboques();renderDashboard();
-  toast(id?'Reboque atualizado!':'Reboque adicionado!','success');
+async function salvarReboque() {
+  const nome  = document.getElementById('rb-nome').value.trim();
+  const diaria= Number(document.getElementById('rb-diaria').value);
+  if (!nome)  { toast('Informe o nome do reboque','error'); return; }
+  if (!diaria){ toast('Informe a diária','error'); return; }
+  const body = { nome, tipo:document.getElementById('rb-tipo').value, placa:document.getElementById('rb-placa').value.trim(), capacidade:document.getElementById('rb-cap').value, diaria, status:document.getElementById('rb-status').value, obs:document.getElementById('rb-obs').value };
+  const id = document.getElementById('rb-id').value;
+  try {
+    if (id) { await api.put(`/api/reboques/${id}`, body); toast('Reboque atualizado!','success'); }
+    else    { await api.post('/api/reboques', body);       toast('Reboque adicionado!','success'); }
+    fecharModal('modal-reboque');
+    await renderReboques(); renderDashboard();
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function excluirReboque(id){
-  const al=DB.get(KEY.al).find(a=>a.rbId===id&&a.status==='ativo');
-  if(al){toast('Este reboque está com aluguel ativo!','error');return}
-  confirmar('Excluir Reboque','Tem certeza que deseja excluir este reboque?',()=>{
-    const r=DB.get(KEY.rb).find(x=>x.id===id);
-    DB.set(KEY.rb,DB.get(KEY.rb).filter(x=>x.id!==id));
-    auditLog('excluir','Reboque',`Reboque excluído: ${r?.nome||id}`,`Tipo: ${r?.tipo||'—'} · Placa: ${r?.placa||'—'}`);
-    renderReboques();renderDashboard();
-    toast('Reboque excluído.','info');
+async function excluirReboque(id) {
+  confirmar('Excluir Reboque','Tem certeza que deseja excluir este reboque?', async () => {
+    try {
+      await api.del(`/api/reboques/${id}`);
+      toast('Reboque excluído.','info');
+      await renderReboques(); renderDashboard();
+    } catch(e) { toast(e.message,'error'); }
   });
 }
 
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    CLIENTES
-══════════════════════════════════════ */
-function renderClientes(){
-  const cl=DB.get(KEY.cl);
-  const al=DB.get(KEY.al);
-  const search=(document.getElementById('cl-search')?.value||'').toLowerCase();
-  let list=[...cl];
-  if(search) list=list.filter(c=>c.nome.toLowerCase().includes(search)||(c.tel||'').includes(search)||(c.cpf||'').includes(search));
+══════════════════════════════════════════════════════ */
+let _clCache = [];
 
-  const el=document.getElementById('lista-clientes');
-  if(!list.length){
-    el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><div class="empty-t">Nenhum Cliente</div><div class="empty-s">Cadastre o primeiro cliente</div></div>`;
-    return;
-  }
-  el.innerHTML=list.map(c=>{
-    const alugueis=al.filter(a=>a.cliId===c.id);
-    const totalGasto=alugueis.reduce((s,a)=>s+Number(a.total),0);
-    const ativo=alugueis.find(a=>a.status==='ativo');
-    return `
-    <div class="cli-row">
-      <div class="cli-av">${initials(c.nome)}</div>
-      <div class="cli-info">
-        <div class="cli-name">${c.nome}</div>
-        <div class="cli-detail">${c.tel}${c.cidade?' · '+c.cidade:''}${c.cpf?' · '+c.cpf:''}</div>
-        ${ativo?`<div style="font-size:11px;color:var(--org);font-weight:600;margin-top:2px">Com reboque ativo</div>`:''}
-      </div>
-      <div class="cli-stats">
-        <div class="cli-n">${alugueis.length} alug.</div>
-        <div class="cli-t">${fmt(totalGasto)}</div>
-      </div>
-      <div class="cli-btns">
-        <button class="btn btn-ghost btn-xs" onclick="abrirModalCliente('${c.id}')">
-          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Editar
-        </button>
-        <button class="btn btn-red btn-xs" onclick="excluirCliente('${c.id}')">
-          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-        </button>
-      </div>
-    </div>`
-  }).join('');
+async function renderClientes() {
+  setLoading('lista-clientes','Carregando clientes...');
+  try {
+    const [cl, al] = await Promise.all([api.get('/api/clientes'), api.get('/api/alugueis')]);
+    _clCache = cl;
+    const search = (document.getElementById('cl-search')?.value||'').toLowerCase();
+    let list = [...cl];
+    if (search) list = list.filter(c=>c.nome.toLowerCase().includes(search)||(c.tel||'').includes(search)||(c.cpf||'').includes(search));
+    const el = document.getElementById('lista-clientes');
+    if (!list.length) {
+      el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><div class="empty-t">Nenhum Cliente</div></div>`;
+      return;
+    }
+    el.innerHTML = list.map(c => {
+      const alugueis   = al.filter(a=>a.cliente_id===c.id);
+      const totalGasto = alugueis.reduce((s,a)=>s+Number(a.total),0);
+      const ativo      = alugueis.find(a=>a.status==='ativo');
+      return `
+      <div class="cli-row">
+        <div class="cli-av">${initials(c.nome)}</div>
+        <div class="cli-info">
+          <div class="cli-name">${c.nome}</div>
+          <div class="cli-detail">${c.tel}${c.cidade?' · '+c.cidade:''}${c.cpf?' · '+c.cpf:''}</div>
+          ${ativo?`<div style="font-size:11px;color:var(--org);font-weight:600;margin-top:2px">Com reboque ativo</div>`:''}
+        </div>
+        <div class="cli-stats"><div class="cli-n">${alugueis.length} alug.</div><div class="cli-t">${fmt(totalGasto)}</div></div>
+        <div class="cli-btns">
+          <button class="btn btn-ghost btn-xs" onclick="abrirModalCliente('${c.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
+          <button class="btn btn-red btn-xs" onclick="excluirCliente('${c.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function abrirModalCliente(id){
-  document.getElementById('cl-id').value='';
-  document.getElementById('modal-cliente-titulo').textContent='Novo Cliente';
+async function abrirModalCliente(id) {
+  document.getElementById('cl-id').value = '';
+  document.getElementById('modal-cliente-titulo').textContent = 'Novo Cliente';
   ['cl-nome','cl-cpf','cl-tel','cl-email','cl-end','cl-cidade','cl-cnh','cl-obs'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('cl-cat').value='';
-  if(id){
-    const c=DB.get(KEY.cl).find(x=>x.id===id);
-    if(c){
-      document.getElementById('cl-id').value=id;
-      document.getElementById('modal-cliente-titulo').textContent='Editar Cliente';
-      document.getElementById('cl-nome').value=c.nome||'';
-      document.getElementById('cl-cpf').value=c.cpf||'';
-      document.getElementById('cl-tel').value=c.tel||'';
-      document.getElementById('cl-email').value=c.email||'';
-      document.getElementById('cl-end').value=c.end||'';
-      document.getElementById('cl-cidade').value=c.cidade||'';
-      document.getElementById('cl-cnh').value=c.cnh||'';
-      document.getElementById('cl-cat').value=c.cat||'';
-      document.getElementById('cl-obs').value=c.obs||'';
+  document.getElementById('cl-cat').value = '';
+  if (id) {
+    const c = _clCache.find(x=>x.id===id);
+    if (c) {
+      document.getElementById('cl-id').value    = id;
+      document.getElementById('modal-cliente-titulo').textContent = 'Editar Cliente';
+      document.getElementById('cl-nome').value  = c.nome||'';
+      document.getElementById('cl-cpf').value   = c.cpf||'';
+      document.getElementById('cl-tel').value   = c.tel||'';
+      document.getElementById('cl-email').value = c.email||'';
+      document.getElementById('cl-end').value   = c.endereco||'';
+      document.getElementById('cl-cidade').value= c.cidade||'';
+      document.getElementById('cl-cnh').value   = c.cnh||'';
+      document.getElementById('cl-cat').value   = c.cat_cnh||'';
+      document.getElementById('cl-obs').value   = c.obs||'';
     }
   }
   abrirModal('modal-cliente');
 }
 
-function salvarCliente(){
-  const nome=document.getElementById('cl-nome').value.trim();
-  const tel=document.getElementById('cl-tel').value.trim();
-  if(!nome){toast('Informe o nome do cliente','error');return}
-  if(!tel){toast('Informe o telefone','error');return}
-  const obj={nome,cpf:document.getElementById('cl-cpf').value.trim(),tel,email:document.getElementById('cl-email').value.trim(),end:document.getElementById('cl-end').value.trim(),cidade:document.getElementById('cl-cidade').value.trim(),cnh:document.getElementById('cl-cnh').value.trim(),cat:document.getElementById('cl-cat').value,obs:document.getElementById('cl-obs').value};
-  const id=document.getElementById('cl-id').value;
-  const cl=DB.get(KEY.cl);
-  if(id){
-    const i=cl.findIndex(x=>x.id===id);
-    if(i>=0)cl[i]={...cl[i],...obj};
-    auditLog('editar','Cliente',`Cliente editado: ${nome}`,`Tel: ${tel} · CPF: ${obj.cpf||'—'} · Cidade: ${obj.cidade||'—'}`);
-  } else {
-    cl.push({id:DB.uid(),...obj});
-    auditLog('criar','Cliente',`Novo cliente cadastrado: ${nome}`,`Tel: ${tel} · CPF: ${obj.cpf||'—'} · Cidade: ${obj.cidade||'—'}`);
-  }
-  DB.set(KEY.cl,cl);
-  fecharModal('modal-cliente');
-  renderClientes();
-  toast(id?'Cliente atualizado!':'Cliente cadastrado!','success');
+async function salvarCliente() {
+  const nome = document.getElementById('cl-nome').value.trim();
+  const tel  = document.getElementById('cl-tel').value.trim();
+  if (!nome){ toast('Informe o nome','error'); return; }
+  if (!tel) { toast('Informe o telefone','error'); return; }
+  const body = { nome, cpf:document.getElementById('cl-cpf').value.trim(), tel, email:document.getElementById('cl-email').value.trim(), endereco:document.getElementById('cl-end').value.trim(), cidade:document.getElementById('cl-cidade').value.trim(), cnh:document.getElementById('cl-cnh').value.trim(), cat_cnh:document.getElementById('cl-cat').value, obs:document.getElementById('cl-obs').value };
+  const id = document.getElementById('cl-id').value;
+  try {
+    if (id) { await api.put(`/api/clientes/${id}`, body); toast('Cliente atualizado!','success'); }
+    else    { await api.post('/api/clientes', body);       toast('Cliente cadastrado!','success'); }
+    fecharModal('modal-cliente');
+    await renderClientes();
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function excluirCliente(id){
-  const al=DB.get(KEY.al).find(a=>a.cliId===id&&a.status==='ativo');
-  if(al){toast('Este cliente possui aluguel ativo!','error');return}
-  confirmar('Excluir Cliente','Tem certeza? O histórico de aluguéis será mantido.',()=>{
-    const c=DB.get(KEY.cl).find(x=>x.id===id);
-    DB.set(KEY.cl,DB.get(KEY.cl).filter(x=>x.id!==id));
-    auditLog('excluir','Cliente',`Cliente excluído: ${c?.nome||id}`,`Tel: ${c?.tel||'—'} · CPF: ${c?.cpf||'—'}`);
-    renderClientes();
-    toast('Cliente excluído.','info');
+async function excluirCliente(id) {
+  confirmar('Excluir Cliente','Tem certeza? O histórico de aluguéis será mantido.', async () => {
+    try {
+      await api.del(`/api/clientes/${id}`);
+      toast('Cliente excluído.','info');
+      await renderClientes();
+    } catch(e) { toast(e.message,'error'); }
   });
 }
 
-/* ══════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    RELATÓRIOS
-══════════════════════════════════════ */
-function renderRelatorios(){
-  const al=DB.get(KEY.al);
-  const rb=DB.get(KEY.rb);
-  const cl=DB.get(KEY.cl);
+══════════════════════════════════════════════════════ */
+async function renderRelatorios() {
+  setLoading('rel-stats','');
+  try {
+    const [stats, porReboque, topCli, al] = await Promise.all([
+      api.get('/api/relatorios/dashboard'),
+      api.get('/api/relatorios/receita-reboque'),
+      api.get('/api/relatorios/top-clientes'),
+      api.get('/api/alugueis'),
+    ]);
+    const totalRec  = al.reduce((s,a)=>s+Number(a.total),0);
+    const pendRec   = al.filter(a=>a.pagamento==='pendente').reduce((s,a)=>s+Number(a.total),0);
+    const cl        = await api.get('/api/clientes');
+    const rb        = await api.get('/api/reboques');
 
-  const totalRec=al.reduce((s,a)=>s+Number(a.total),0);
-  const ativos=al.filter(a=>a.status==='ativo').length;
-  const encerrados=al.filter(a=>a.status==='encerrado').length;
-  const pendRec=al.filter(a=>a.pag==='pendente').reduce((s,a)=>s+Number(a.total),0);
+    document.getElementById('rel-stats').innerHTML = `
+      <div class="stat-card c-org"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="stat-val" style="font-size:${totalRec>=10000?'22px':'32px'}">${fmt(totalRec)}</div><div class="stat-lbl">Receita Total</div></div>
+      <div class="stat-card c-grn"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div class="stat-val">${al.length}</div><div class="stat-lbl">Total Aluguéis</div></div>
+      <div class="stat-card c-blu"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="stat-val">${cl.length}</div><div class="stat-lbl">Clientes</div></div>
+      <div class="stat-card c-amb"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="stat-val" style="font-size:${pendRec>=10000?'22px':'32px'}">${fmt(pendRec)}</div><div class="stat-lbl">A Receber</div></div>
+    `;
 
-  document.getElementById('rel-stats').innerHTML=`
-    <div class="stat-card c-org"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="stat-val" style="font-size:26px">${fmt(totalRec)}</div><div class="stat-lbl">Receita Total</div></div>
-    <div class="stat-card c-grn"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><div class="stat-val">${al.length}</div><div class="stat-lbl">Total Aluguéis</div></div>
-    <div class="stat-card c-blu"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div class="stat-val">${cl.length}</div><div class="stat-lbl">Clientes</div></div>
-    <div class="stat-card c-amb"><div class="stat-ico"><svg viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="stat-val" style="font-size:26px">${fmt(pendRec)}</div><div class="stat-lbl">A Receber</div></div>
-  `;
+    const maxRec = Math.max(1,...porReboque.map(r=>Number(r.receita)));
+    document.getElementById('rel-por-reboque').innerHTML = porReboque.length ? porReboque.map(r=>{
+      const w = Math.max(4, Math.round((Number(r.receita)/maxRec)*100));
+      return `<div class="bar-row">
+        <div class="bar-lbl" title="${r.nome}">${r.nome.substring(0,16)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${w}%"><div class="bar-val">${r.total_alugueis}x · ${fmt(r.receita)}</div></div></div>
+      </div>`;
+    }).join('') : '<p style="color:var(--muted);font-size:13px">Sem dados</p>';
 
-  // Por reboque
-  const maxRec=Math.max(1,...rb.map(r=>al.filter(a=>a.rbId===r.id).reduce((s,a)=>s+Number(a.total),0)));
-  document.getElementById('rel-por-reboque').innerHTML=rb.length?rb.map(r=>{
-    const rec=al.filter(a=>a.rbId===r.id).reduce((s,a)=>s+Number(a.total),0);
-    const n=al.filter(a=>a.rbId===r.id).length;
-    const w=maxRec>0?Math.max(4,Math.round((rec/maxRec)*100)):4;
-    return `<div class="bar-row">
-      <div class="bar-lbl" title="${r.nome}">${r.nome.substring(0,16)}</div>
-      <div class="bar-track"><div class="bar-fill" style="width:${w}%"><div class="bar-val">${n}x · ${fmt(rec)}</div></div></div>
-    </div>`
-  }).join(''):'<p style="color:var(--muted);font-size:13px">Sem dados</p>';
+    document.getElementById('rel-top-cli').innerHTML = topCli.filter(c=>c.total_alugueis>0).length ? topCli.filter(c=>c.total_alugueis>0).map(c=>`
+      <div class="cli-row" style="padding:11px 0">
+        <div class="cli-av" style="width:34px;height:34px;font-size:12px">${initials(c.nome)}</div>
+        <div class="cli-info"><div class="cli-name" style="font-size:13px">${c.nome}</div><div class="cli-detail">${c.total_alugueis} aluguel(s)</div></div>
+        <div class="cli-stats" style="margin-left:auto"><div class="cli-n" style="font-size:16px">${fmt(c.total_gasto)}</div></div>
+      </div>`).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--muted)">Sem dados ainda.</div>';
 
-  // Top clientes
-  const topCl=cl.map(c=>{
-    const n=al.filter(a=>a.cliId===c.id).length;
-    const t=al.filter(a=>a.cliId===c.id).reduce((s,a)=>s+Number(a.total),0);
-    return{...c,n,t};
-  }).filter(c=>c.n>0).sort((a,b)=>b.t-a.t).slice(0,6);
-  document.getElementById('rel-top-cli').innerHTML=topCl.length?topCl.map(c=>`
-    <div class="cli-row" style="padding:11px 0">
-      <div class="cli-av" style="width:34px;height:34px;font-size:12px">${initials(c.nome)}</div>
-      <div class="cli-info"><div class="cli-name" style="font-size:13px">${c.nome}</div><div class="cli-detail">${c.n} aluguel(s)</div></div>
-      <div class="cli-stats" style="margin-left:auto"><div class="cli-n" style="font-size:16px">${fmt(c.t)}</div></div>
-    </div>`).join(''):'<div style="padding:16px 0;font-size:13px;color:var(--muted)">Sem dados ainda.</div>';
-
-  // Pagamentos
-  const pago=al.filter(a=>a.pag==='pago').reduce((s,a)=>s+Number(a.total),0);
-  const pendente=al.filter(a=>a.pag==='pendente').reduce((s,a)=>s+Number(a.total),0);
-  const parcial=al.filter(a=>a.pag==='parcial').reduce((s,a)=>s+Number(a.total),0);
-  document.getElementById('rel-pagamentos').innerHTML=`
-    <div style="display:flex;flex-direction:column;gap:10px">
-      ${[['Pago','var(--grn)',pago],['Pendente','var(--amb)',pendente],['Parcial','var(--org)',parcial]].map(([l,c,v])=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border-left:3px solid ${c}">
-          <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">${l}</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${c};letter-spacing:1px">${fmt(v)}</span>
-        </div>`).join('')}
-    </div>`;
+    const pago    = al.filter(a=>a.pagamento==='pago').reduce((s,a)=>s+Number(a.total),0);
+    const pend    = al.filter(a=>a.pagamento==='pendente').reduce((s,a)=>s+Number(a.total),0);
+    const parcial = al.filter(a=>a.pagamento==='parcial').reduce((s,a)=>s+Number(a.total),0);
+    document.getElementById('rel-pagamentos').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${[['Pago','var(--grn)',pago],['Pendente','var(--amb)',pend],['Parcial','var(--org)',parcial]].map(([l,c,v])=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg);border-left:3px solid ${c}">
+            <span style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px">${l}</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${c};letter-spacing:1px">${fmt(v)}</span>
+          </div>`).join('')}
+      </div>`;
+  } catch(e) { toast(e.message,'error'); }
 }
 
-/* ══════════════════════════════════════
-   CONFIGURAÇÕES
-══════════════════════════════════════ */
-function salvarConfig(){
-  const cfg={nome:document.getElementById('cfg-nome').value,tel:document.getElementById('cfg-tel').value,end:document.getElementById('cfg-end').value,cidade:document.getElementById('cfg-cidade').value,diaria:Number(document.getElementById('cfg-diaria').value)||70,multa:Number(document.getElementById('cfg-multa').value)||0};
-  DB.setObj(KEY.cfg,cfg);
-  auditLog('config','Configuração','Configurações do sistema atualizadas',`Empresa: ${cfg.nome} · Diária padrão: ${fmt(cfg.diaria)}`);
-  toast('Configurações salvas!','success');
-}
+/* ══════════════════════════════════════════════════════
+   USUÁRIOS
+══════════════════════════════════════════════════════ */
+let _usrCache = [];
 
-function exportarDados(){
-  const data={reboques:DB.get(KEY.rb),clientes:DB.get(KEY.cl),alugueis:DB.get(KEY.al),config:DB.getObj(KEY.cfg,{}),exportado:new Date().toISOString()};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`rocha-reboques-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
-  toast('Dados exportados!','success');
-}
-
-function limparDados(){
-  confirmar('Limpar Todos os Dados','Esta ação é irreversível e apagará TODOS os dados do sistema. Tem certeza absoluta?',()=>{
-    [KEY.rb,KEY.cl,KEY.al,KEY.cfg].forEach(k=>localStorage.removeItem(k));
-    location.reload();
-  });
-}
-
-/* ══════════════════════════════════════
-   AUTH — SISTEMA DE USUÁRIOS
-══════════════════════════════════════ */
-const KEY_USR = 'rr2_usuarios';
-const KEY_SES = 'rr2_sessao';
-
-// Hash simples (não criptográfico — apenas ofuscação local)
-function hashSenha(s){ let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return h.toString(36); }
-
-function getUsuarios(){ try{return JSON.parse(localStorage.getItem(KEY_USR))||[]}catch{return[]} }
-function setUsuarios(v){ localStorage.setItem(KEY_USR,JSON.stringify(v)) }
-function getSessao(){ try{return JSON.parse(sessionStorage.getItem(KEY_SES))||null}catch{return null} }
-function setSessao(u){ sessionStorage.setItem(KEY_SES,JSON.stringify(u)) }
-function removerSessao(){ sessionStorage.removeItem(KEY_SES) }
-
-let usuarioAtual = null;
-
-function seedUsuarios(){
-  if(!getUsuarios().length){
-    setUsuarios([{
-      id:'u-admin',
-      nome:'Administrador',
-      login:'admin',
-      senha:hashSenha('admin123'),
-      nivel:'gerente',
-      criado:today(),
-      ultimoAcesso:null
-    }]);
-  }
-}
-
-function fazerLogin(){
-  const loginVal = document.getElementById('login-user').value.trim();
-  const senhaVal = document.getElementById('login-pass').value;
-  const errEl = document.getElementById('login-error');
-  const errMsg = document.getElementById('login-error-msg');
-  const btn = document.getElementById('login-btn');
-
-  if(!loginVal || !senhaVal){
-    errMsg.textContent = 'Preencha usuário e senha.';
-    errEl.classList.add('show'); return;
-  }
-
-  btn.textContent = 'Verificando...'; btn.disabled = true;
-
-  setTimeout(()=>{
-    const usuarios = getUsuarios();
-    const u = usuarios.find(x=>x.login===loginVal && x.senha===hashSenha(senhaVal));
-    if(!u){
-      errMsg.textContent = 'Usuário ou senha incorretos.';
-      errEl.classList.add('show');
-      btn.innerHTML='<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Entrar';
-      btn.disabled=false; return;
-    }
-
-    // Atualiza último acesso
-    const idx=usuarios.findIndex(x=>x.id===u.id);
-    if(idx>=0){ usuarios[idx].ultimoAcesso=new Date().toISOString(); setUsuarios(usuarios); }
-
-    errEl.classList.remove('show');
-    usuarioAtual = u;
-    setSessao({id:u.id,login:u.login,nome:u.nome,nivel:u.nivel});
-    auditLog('login','Sistema',`Login realizado: ${u.nome}`,`Nível: ${u.nivel} · IP: navegador local`);
-
-    // Oculta tela de login
-    document.getElementById('login-screen').classList.add('hidden');
-    iniciarSistema();
-  }, 400);
-}
-
-function fazerLogout(){
-  confirmar('Sair do Sistema','Deseja realmente encerrar sua sessão?',()=>{
-    auditLog('logout','Sistema',`Logout: ${usuarioAtual?.nome||'—'}`,`Sessão encerrada pelo usuário`);
-    removerSessao();
-    usuarioAtual=null;
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('login-user').value='';
-    document.getElementById('login-pass').value='';
-    document.getElementById('login-btn').innerHTML='<svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Entrar';
-    document.getElementById('login-btn').disabled=false;
-    // Volta ao dashboard
-    goTo('dashboard');
-  }, false);
-}
-
-function toggleSenhaVis(){
-  const inp=document.getElementById('login-pass');
-  const ico=document.getElementById('eye-icon');
-  const show=inp.type==='password';
-  inp.type=show?'text':'password';
-  ico.innerHTML=show
-    ?'<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
-    :'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
-}
-
-function toggleUserMenu(){
-  document.getElementById('user-dropdown').classList.toggle('show');
-}
-document.addEventListener('click',e=>{
-  const wrap=document.getElementById('user-menu-wrap');
-  if(wrap&&!wrap.contains(e.target)) document.getElementById('user-dropdown')?.classList.remove('show');
-});
-
-function atualizarTopbar(){
-  if(!usuarioAtual) return;
-  const ini=usuarioAtual.nome.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
-  document.getElementById('tb-avatar-txt').textContent=ini||'U';
-  document.getElementById('tb-uname-txt').textContent=usuarioAtual.nome.split(' ')[0];
-  document.getElementById('dd-username').textContent=usuarioAtual.nome;
-  document.getElementById('dd-role').textContent=usuarioAtual.nivel==='gerente'?'Gerente · Acesso Total':'Auxiliar · Acesso Limitado';
-
-  // Mostrar/ocultar opções de gerente
-  const isGer=usuarioAtual.nivel==='gerente';
-  const navUsr=document.getElementById('nav-usuarios');
-  if(navUsr) navUsr.style.display=isGer?'flex':'none';
-  const ddGer=document.getElementById('dd-gerenciar-wrap');
-  if(ddGer) ddGer.style.display=isGer?'block':'none';
-
-  // Esconder Configurações, Relatórios e Histórico para auxiliar
-  const navCfg=document.getElementById('nav-configuracoes');
-  if(navCfg) navCfg.style.display=isGer?'flex':'none';
-  const navRel=document.getElementById('nav-relatorios');
-  if(navRel) navRel.style.display=isGer?'flex':'none';
-  const navHis=document.getElementById('nav-historico');
-  if(navHis) navHis.style.display=isGer?'flex':'none';
-}
-
-/* ══ PÁGINA USUÁRIOS ══ */
-const pages_ext=['usuarios','minha-conta'];
-
-function renderUsuarios(){
-  const isGer=usuarioAtual?.nivel==='gerente';
-  const actEl=document.getElementById('ph-usuarios-actions');
-  if(actEl) actEl.innerHTML=isGer?`<button class="btn btn-primary" onclick="abrirModalUsuario()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Usuário</button>`:'';
-
-  const el=document.getElementById('usuarios-content');
-  if(!isGer){
-    el.innerHTML=`<div class="blocked-msg"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><h3>Acesso Restrito</h3><p>Apenas gerentes podem visualizar e gerenciar os usuários do sistema.</p></div>`;
+async function renderUsuarios() {
+  if (usuarioAtual?.nivel !== 'gerente') {
+    document.getElementById('usuarios-content').innerHTML = `<div class="blocked-msg"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><h3>Acesso Restrito</h3><p>Apenas gerentes podem gerenciar usuários.</p></div>`;
+    document.getElementById('ph-usuarios-actions').innerHTML = '';
     return;
   }
-
-  const usuarios=getUsuarios();
-  const card=document.createElement('div');
-  card.className='card';
-  card.innerHTML=`
-    <div class="card-hd">
-      <div class="card-title">Usuários Cadastrados (${usuarios.length})</div>
-    </div>
-    <div class="card-body np">
-      ${usuarios.map(u=>{
-        const ini=u.nome.split(' ').slice(0,2).map(n=>n[0]||'').join('').toUpperCase();
-        const isMe=u.id===usuarioAtual?.id;
-        return `<div class="usr-row">
-          <div class="usr-av ${u.nivel}">${ini}</div>
-          <div class="usr-info">
-            <div class="usr-name">${u.nome} ${isMe?'<span style="font-size:10px;color:var(--muted)">(você)</span>':''}</div>
-            <div class="usr-detail">@${u.login} · Criado em ${fmtDate(u.criado)}${u.ultimoAcesso?' · Último acesso: '+fmtDate(u.ultimoAcesso.slice(0,10)):''}</div>
-          </div>
-          <span class="nivel-badge nivel-${u.nivel}" style="font-size:10px">${u.nivel==='gerente'?'Gerente':'Auxiliar'}</span>
-          <div class="usr-btns">
-            ${!isMe?`
-              <button class="btn btn-ghost btn-xs" onclick="abrirResetSenha('${u.id}')">
-                <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-                Senha
-              </button>
-              <button class="btn btn-ghost btn-xs" onclick="editarUsuario('${u.id}')">
-                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                Editar
-              </button>
-              <button class="btn btn-red btn-xs" onclick="excluirUsuario('${u.id}')">
-                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
-              </button>
-            `:'<span style="font-size:11px;color:var(--muted);padding:0 6px">Conta ativa</span>'}
-          </div>
-        </div>`
-      }).join('')}
-    </div>`;
-  el.innerHTML='';
-  el.appendChild(card);
+  document.getElementById('ph-usuarios-actions').innerHTML =
+    `<button class="btn btn-primary" onclick="abrirModalUsuario()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Novo Usuário</button>`;
+  setLoading('usuarios-content','Carregando usuários...');
+  try {
+    _usrCache = await api.get('/api/usuarios');
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-hd"><div class="card-title">Usuários Cadastrados (${_usrCache.length})</div></div>
+      <div class="card-body np">
+        ${_usrCache.map(u => {
+          const ini   = initials(u.nome);
+          const isMe  = u.id === usuarioAtual?.id;
+          return `<div class="usr-row">
+            <div class="usr-av ${u.nivel}">${ini}</div>
+            <div class="usr-info">
+              <div class="usr-name">${u.nome} ${isMe?'<span style="font-size:10px;color:var(--muted)">(você)</span>':''}</div>
+              <div class="usr-detail">@${u.login} · Criado em ${fmtDate((u.criado_em||'').slice(0,10))}${u.ultimo_acesso?' · Último acesso: '+fmtDate(u.ultimo_acesso.slice(0,10)):''}</div>
+            </div>
+            <span class="nivel-badge nivel-${u.nivel}" style="font-size:10px">${u.nivel==='gerente'?'Gerente':'Auxiliar'}</span>
+            <div class="usr-btns">
+              ${!isMe?`
+                <button class="btn btn-ghost btn-xs" onclick="abrirResetSenha('${u.id}')"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Senha</button>
+                <button class="btn btn-ghost btn-xs" onclick="abrirModalUsuario('${u.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
+                <button class="btn btn-red btn-xs" onclick="excluirUsuario('${u.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg></button>
+              `:'<span style="font-size:11px;color:var(--muted);padding:0 6px">Conta ativa</span>'}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    const el = document.getElementById('usuarios-content');
+    el.innerHTML = ''; el.appendChild(card);
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function abrirModalUsuario(id){
-  document.getElementById('usr-id').value='';
-  document.getElementById('modal-usuario-titulo').textContent='Novo Usuário';
+function abrirModalUsuario(id) {
+  document.getElementById('usr-id').value = '';
+  document.getElementById('modal-usuario-titulo').textContent = 'Novo Usuário';
   ['usr-nome','usr-login','usr-senha','usr-conf'].forEach(x=>document.getElementById(x).value='');
-  document.getElementById('usr-nivel').value='auxiliar';
-  if(id){
-    const u=getUsuarios().find(x=>x.id===id);
-    if(u){
-      document.getElementById('usr-id').value=id;
-      document.getElementById('modal-usuario-titulo').textContent='Editar Usuário';
-      document.getElementById('usr-nome').value=u.nome;
-      document.getElementById('usr-login').value=u.login;
-      document.getElementById('usr-nivel').value=u.nivel;
-      document.getElementById('usr-senha').placeholder='Deixe em branco para não alterar';
-      document.getElementById('usr-conf').placeholder='Deixe em branco para não alterar';
+  document.getElementById('usr-nivel').value = 'auxiliar';
+  document.getElementById('usr-senha').placeholder = 'Mínimo 6 caracteres';
+  document.getElementById('usr-conf').placeholder  = 'Repita a senha';
+  if (id) {
+    const u = _usrCache.find(x=>x.id===id);
+    if (u) {
+      document.getElementById('usr-id').value    = id;
+      document.getElementById('modal-usuario-titulo').textContent = 'Editar Usuário';
+      document.getElementById('usr-nome').value  = u.nome;
+      document.getElementById('usr-login').value = u.login;
+      document.getElementById('usr-nivel').value = u.nivel;
+      document.getElementById('usr-senha').placeholder = 'Deixe em branco para não alterar';
+      document.getElementById('usr-conf').placeholder  = 'Deixe em branco para não alterar';
     }
   }
   abrirModal('modal-usuario');
 }
 
-function editarUsuario(id){ abrirModalUsuario(id); }
-
-function salvarUsuario(){
-  const nome=document.getElementById('usr-nome').value.trim();
-  const login=document.getElementById('usr-login').value.trim().toLowerCase();
-  const senha=document.getElementById('usr-senha').value;
-  const conf=document.getElementById('usr-conf').value;
-  const nivel=document.getElementById('usr-nivel').value;
-  const id=document.getElementById('usr-id').value;
-
-  if(!nome){toast('Informe o nome','error');return}
-  if(!login){toast('Informe o login','error');return}
-  if(!/^[a-z0-9._-]+$/.test(login)){toast('Login: use apenas letras, números, ponto ou hífen','error');return}
-
-  const usuarios=getUsuarios();
-
-  if(!id){
-    if(!senha){toast('Informe a senha','error');return}
-    if(senha.length<6){toast('Senha deve ter no mínimo 6 caracteres','error');return}
-    if(senha!==conf){toast('Senhas não conferem','error');return}
-    if(usuarios.find(u=>u.login===login)){toast('Este login já existe','error');return}
-    usuarios.push({id:'u-'+DB.uid(),nome,login,senha:hashSenha(senha),nivel,criado:today(),ultimoAcesso:null});
-    auditLog('criar','Usuários',`Novo usuário criado: ${nome}`,`Login: @${login} · Nível: ${nivel}`);
-    toast('Usuário criado!','success');
-  } else {
-    const idx=usuarios.findIndex(u=>u.id===id);
-    if(idx<0) return;
-    if(usuarios.find(u=>u.login===login&&u.id!==id)){toast('Este login já existe','error');return}
-    const detChanges=[];
-    if(usuarios[idx].nome!==nome) detChanges.push(`Nome: ${usuarios[idx].nome} → ${nome}`);
-    if(usuarios[idx].nivel!==nivel) detChanges.push(`Nível: ${usuarios[idx].nivel} → ${nivel}`);
-    if(senha){
-      if(senha.length<6){toast('Senha deve ter no mínimo 6 caracteres','error');return}
-      if(senha!==conf){toast('Senhas não conferem','error');return}
-      usuarios[idx].senha=hashSenha(senha);
-      detChanges.push('Senha alterada');
-    }
-    usuarios[idx].nome=nome;
-    usuarios[idx].login=login;
-    usuarios[idx].nivel=nivel;
-    auditLog('editar','Usuários',`Usuário editado: ${nome}`,detChanges.join(' · ')||'Sem alterações relevantes');
-    toast('Usuário atualizado!','success');
-  }
-  setUsuarios(usuarios);
-  fecharModal('modal-usuario');
-  renderUsuarios();
+async function salvarUsuario() {
+  const nome  = document.getElementById('usr-nome').value.trim();
+  const login = document.getElementById('usr-login').value.trim().toLowerCase();
+  const senha = document.getElementById('usr-senha').value;
+  const conf  = document.getElementById('usr-conf').value;
+  const nivel = document.getElementById('usr-nivel').value;
+  const id    = document.getElementById('usr-id').value;
+  if (!nome)  { toast('Informe o nome','error'); return; }
+  if (!login) { toast('Informe o login','error'); return; }
+  if (!/^[a-z0-9._-]+$/.test(login)) { toast('Login: use apenas letras, números, ponto ou hífen','error'); return; }
+  if (!id && !senha)       { toast('Informe a senha','error'); return; }
+  if (senha && senha.length < 6) { toast('Senha mínimo 6 caracteres','error'); return; }
+  if (senha && senha !== conf)   { toast('Senhas não conferem','error'); return; }
+  const body = { nome, login, nivel, ...(senha?{senha}:{}) };
+  try {
+    if (id) { await api.put(`/api/usuarios/${id}`, body); toast('Usuário atualizado!','success'); }
+    else    { await api.post('/api/usuarios', body);       toast('Usuário criado!','success'); }
+    fecharModal('modal-usuario');
+    await renderUsuarios();
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function excluirUsuario(id){
-  if(id===usuarioAtual?.id){toast('Você não pode excluir sua própria conta!','error');return}
-  const u=getUsuarios().find(x=>x.id===id);
-  if(!u) return;
-  confirmar('Excluir Usuário',`Deseja excluir o usuário "${u.nome}"? Esta ação não pode ser desfeita.`,()=>{
-    setUsuarios(getUsuarios().filter(x=>x.id!==id));
-    auditLog('excluir','Usuários',`Usuário excluído: ${u.nome}`,`Login: @${u.login} · Nível: ${u.nivel}`);
-    renderUsuarios();
-    toast('Usuário excluído.','info');
+async function excluirUsuario(id) {
+  const u = _usrCache.find(x=>x.id===id);
+  confirmar('Excluir Usuário',`Deseja excluir "${u?.nome}"? Esta ação não pode ser desfeita.`, async () => {
+    try { await api.del(`/api/usuarios/${id}`); toast('Usuário excluído.','info'); await renderUsuarios(); }
+    catch(e) { toast(e.message,'error'); }
   });
 }
 
-function abrirResetSenha(id){
-  const u=getUsuarios().find(x=>x.id===id);
-  if(!u) return;
-  document.getElementById('reset-usr-id').value=id;
-  document.getElementById('reset-usr-nome').textContent=u.nome;
-  document.getElementById('reset-nova').value='';
-  document.getElementById('reset-conf').value='';
+function abrirResetSenha(id) {
+  const u = _usrCache.find(x=>x.id===id);
+  document.getElementById('reset-usr-id').value   = id;
+  document.getElementById('reset-usr-nome').textContent = u?.nome||'';
+  document.getElementById('reset-nova').value = '';
+  document.getElementById('reset-conf').value = '';
   abrirModal('modal-reset-senha');
 }
 
-function confirmarResetSenha(){
-  const id=document.getElementById('reset-usr-id').value;
-  const nova=document.getElementById('reset-nova').value;
-  const conf=document.getElementById('reset-conf').value;
-  if(!nova||nova.length<6){toast('Senha deve ter no mínimo 6 caracteres','error');return}
-  if(nova!==conf){toast('Senhas não conferem','error');return}
-  const usuarios=getUsuarios();
-  const idx=usuarios.findIndex(u=>u.id===id);
-  if(idx<0) return;
-  usuarios[idx].senha=hashSenha(nova);
-  setUsuarios(usuarios);
-  const u=usuarios[idx];
-  auditLog('senha','Usuários',`Senha redefinida para: ${u.nome}`,`Login: @${u.login} · Redefinida por: ${usuarioAtual?.nome||'—'}`);
-  fecharModal('modal-reset-senha');
-  toast('Senha redefinida com sucesso!','success');
+async function confirmarResetSenha() {
+  const id   = document.getElementById('reset-usr-id').value;
+  const nova = document.getElementById('reset-nova').value;
+  const conf = document.getElementById('reset-conf').value;
+  if (!nova || nova.length < 6) { toast('Senha mínimo 6 caracteres','error'); return; }
+  if (nova !== conf)             { toast('Senhas não conferem','error'); return; }
+  try {
+    await api.put(`/api/usuarios/${id}/senha`, { novaSenha: nova });
+    fecharModal('modal-reset-senha');
+    toast('Senha redefinida!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-/* ══ MINHA CONTA ══ */
-function renderMinhaConta(){
-  if(!usuarioAtual) return;
-  document.getElementById('mc-senha-atual').value='';
-  document.getElementById('mc-nova-senha').value='';
-  document.getElementById('mc-conf-senha').value='';
-
-  document.getElementById('mc-info').innerHTML=`
+/* ══════════════════════════════════════════════════════
+   MINHA CONTA
+══════════════════════════════════════════════════════ */
+function renderMinhaConta() {
+  if (!usuarioAtual) return;
+  ['mc-senha-atual','mc-nova-senha','mc-conf-senha'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mc-info').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       ${[['Nome',usuarioAtual.nome],['Login','@'+usuarioAtual.login],['Nível',usuarioAtual.nivel==='gerente'?'Gerente':'Auxiliar'],['ID do Sistema',usuarioAtual.id]].map(([l,v])=>`
         <div style="background:var(--bg);padding:12px 14px">
@@ -2567,204 +2353,208 @@ function renderMinhaConta(){
     </div>`;
 }
 
-function alterarSenha(){
-  const atual=document.getElementById('mc-senha-atual').value;
-  const nova=document.getElementById('mc-nova-senha').value;
-  const conf=document.getElementById('mc-conf-senha').value;
-  if(!atual){toast('Informe a senha atual','error');return}
-  const usuarios=getUsuarios();
-  const idx=usuarios.findIndex(u=>u.id===usuarioAtual.id);
-  if(idx<0) return;
-  if(usuarios[idx].senha!==hashSenha(atual)){toast('Senha atual incorreta','error');return}
-  if(!nova||nova.length<6){toast('Nova senha deve ter no mínimo 6 caracteres','error');return}
-  if(nova!==conf){toast('As novas senhas não conferem','error');return}
-  usuarios[idx].senha=hashSenha(nova);
-  setUsuarios(usuarios);
-  auditLog('senha','Minha Conta','Senha alterada pelo próprio usuário',`Login: @${usuarioAtual.login}`);
-  document.getElementById('mc-senha-atual').value='';
-  document.getElementById('mc-nova-senha').value='';
-  document.getElementById('mc-conf-senha').value='';
-  toast('Senha alterada com sucesso!','success');
+async function alterarSenha() {
+  const atual = document.getElementById('mc-senha-atual').value;
+  const nova  = document.getElementById('mc-nova-senha').value;
+  const conf  = document.getElementById('mc-conf-senha').value;
+  if (!atual) { toast('Informe a senha atual','error'); return; }
+  if (!nova || nova.length < 6) { toast('Nova senha deve ter no mínimo 6 caracteres','error'); return; }
+  if (nova !== conf) { toast('As novas senhas não conferem','error'); return; }
+  try {
+    await api.put('/api/auth/senha', { senhaAtual: atual, novaSenha: nova });
+    ['mc-senha-atual','mc-nova-senha','mc-conf-senha'].forEach(id=>document.getElementById(id).value='');
+    toast('Senha alterada com sucesso!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-/* ══════════════════════════════════════
-   AUDITORIA — LOG DE ALTERAÇÕES
-══════════════════════════════════════ */
-const KEY_LOG = 'rr2_auditoria';
-
-function getLogs(){ try{return JSON.parse(localStorage.getItem(KEY_LOG))||[]}catch{return[]} }
-function setLogs(v){ localStorage.setItem(KEY_LOG,JSON.stringify(v)) }
-
+/* ══════════════════════════════════════════════════════
+   HISTÓRICO / AUDITORIA
+══════════════════════════════════════════════════════ */
+let _audFiltro = '';
 const AUDIT_TIPO = {
-  criar:   {label:'Criado',    cls:'criar',  icon:'<polyline points="12 5 12 19"/><polyline points="5 12 12 19 19 12"/>'},
-  editar:  {label:'Editado',   cls:'editar', icon:'<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>'},
-  excluir: {label:'Excluído',  cls:'excluir',icon:'<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>'},
+  criar:   {label:'Criado',    cls:'criar',   icon:'<polyline points="12 5 12 19"/><polyline points="5 12 12 19 19 12"/>'},
+  editar:  {label:'Editado',   cls:'editar',  icon:'<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>'},
+  excluir: {label:'Excluído',  cls:'excluir', icon:'<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>'},
   encerrar:{label:'Encerrado', cls:'encerrar',icon:'<polyline points="20 6 9 17 4 12"/>'},
-  login:   {label:'Login',     cls:'login',  icon:'<path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>'},
-  logout:  {label:'Logout',    cls:'logout', icon:'<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'},
-  senha:   {label:'Senha',     cls:'senha',  icon:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>'},
-  config:  {label:'Config',    cls:'config', icon:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33"/>'}
+  login:   {label:'Login',     cls:'login',   icon:'<path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>'},
+  logout:  {label:'Logout',    cls:'logout',  icon:'<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>'},
+  senha:   {label:'Senha',     cls:'senha',   icon:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>'},
+  config:  {label:'Config',    cls:'config',  icon:'<circle cx="12" cy="12" r="3"/>'},
 };
 
-function auditLog(tipo, modulo, descricao, detalhes){
-  const logs=getLogs();
-  const entry={
-    id: DB.uid(),
-    tipo,
-    modulo,
-    descricao,
-    detalhes: detalhes||null,
-    usuario: usuarioAtual?.login||'sistema',
-    usuarioNome: usuarioAtual?.nome||'Sistema',
-    usuarioNivel: usuarioAtual?.nivel||'—',
-    ts: new Date().toISOString()
-  };
-  logs.unshift(entry); // mais recente primeiro
-  // Limita a 500 registros
-  if(logs.length>500) logs.splice(500);
-  setLogs(logs);
-}
-
-let _audFiltro = '';
-
-function renderHistorico(){
-  if(usuarioAtual?.nivel!=='gerente'){
-    document.getElementById('aud-lista').innerHTML=`<div class="blocked-msg"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><h3>Acesso Restrito</h3><p>Apenas gerentes podem ver o histórico de auditoria.</p></div>`;
-    document.getElementById('aud-filters').innerHTML='';
+async function renderHistorico() {
+  if (usuarioAtual?.nivel !== 'gerente') {
+    document.getElementById('aud-lista').innerHTML = `<div class="blocked-msg"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg><h3>Acesso Restrito</h3><p>Apenas gerentes podem ver o histórico de auditoria.</p></div>`;
+    document.getElementById('aud-filters').innerHTML = '';
     return;
   }
+  setLoading('aud-lista','Carregando histórico...');
+  try {
+    const params = _audFiltro ? `?tipo=${_audFiltro}&limit=200` : '?limit=200';
+    const logs   = await api.get(`/api/auditoria${params}`);
+    const tipos  = [...new Set(logs.map(l=>l.tipo))];
 
-  let logs=getLogs();
+    document.getElementById('aud-filters').innerHTML = `
+      <button class="aud-filter-btn ${!_audFiltro?'active':''}" onclick="setAudFiltro('')">Todos</button>
+      ${Object.keys(AUDIT_TIPO).filter(t=>tipos.includes(t)).map(t=>`
+        <button class="aud-filter-btn ${_audFiltro===t?'active c-'+t:''}" onclick="setAudFiltro('${t}')">${AUDIT_TIPO[t]?.label}</button>`).join('')}
+      <span class="aud-counter">${logs.length} registro(s)</span>
+    `;
 
-  // Filtros
-  const modulos=[...new Set(logs.map(l=>l.modulo))];
-  const tipos=[...new Set(logs.map(l=>l.tipo))];
-
-  document.getElementById('aud-filters').innerHTML=`
-    <button class="aud-filter-btn ${!_audFiltro?'active':''}" onclick="setAudFiltro('')">Todos</button>
-    ${['criar','editar','excluir','encerrar','login','logout','senha','config'].filter(t=>tipos.includes(t)).map(t=>`
-      <button class="aud-filter-btn ${_audFiltro===t?'active c-'+t:''}" onclick="setAudFiltro('${t}')">${AUDIT_TIPO[t]?.label||t}</button>`
-    ).join('')}
-    <span class="aud-counter">${logs.length} registro(s)</span>
-  `;
-
-  if(_audFiltro) logs=logs.filter(l=>l.tipo===_audFiltro);
-
-  const el=document.getElementById('aud-lista');
-  if(!logs.length){
-    el.innerHTML=`<div class="empty"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div class="empty-t">Nenhum Registro</div><div class="empty-s">As ações do sistema aparecerão aqui</div></div>`;
-    return;
-  }
-
-  const fmtTs = ts=>{
-    const d=new Date(ts);
-    return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  };
-
-  el.innerHTML=logs.slice(0,200).map(l=>{
-    const t=AUDIT_TIPO[l.tipo]||AUDIT_TIPO.config;
-    return `
-    <div class="aud-row">
-      <div class="aud-icon ${t.cls}">
-        <svg viewBox="0 0 24 24">${t.icon}</svg>
-      </div>
-      <div class="aud-main">
-        <div class="aud-action"><span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-right:6px">${l.modulo}</span>${l.descricao}</div>
-        ${l.detalhes?`<div class="aud-detail">${l.detalhes}</div>`:''}
-      </div>
-      <div class="aud-right">
-        <div class="aud-user">@${l.usuario} <span style="font-weight:400;color:var(--muted)">(${l.usuarioNivel})</span></div>
-        <div class="aud-time">${fmtTs(l.ts)}</div>
-      </div>
-    </div>`
-  }).join('');
-
-  if(logs.length>200){
-    el.innerHTML+=`<div style="text-align:center;padding:14px;font-size:12px;color:var(--muted)">Exibindo os 200 registros mais recentes de ${logs.length} total. Exporte para ver todos.</div>`;
-  }
+    const el = document.getElementById('aud-lista');
+    if (!logs.length) {
+      el.innerHTML = `<div class="empty"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><div class="empty-t">Nenhum Registro</div><div class="empty-s">As ações do sistema aparecerão aqui</div></div>`;
+      return;
+    }
+    const fmtTs = ts => { const d=new Date(ts); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); };
+    el.innerHTML = logs.map(l => {
+      const t = AUDIT_TIPO[l.tipo] || AUDIT_TIPO.config;
+      return `
+      <div class="aud-row">
+        <div class="aud-icon ${t.cls}"><svg viewBox="0 0 24 24">${t.icon}</svg></div>
+        <div class="aud-main">
+          <div class="aud-action"><span style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-right:6px">${l.modulo}</span>${l.descricao}</div>
+          ${l.detalhes?`<div class="aud-detail">${l.detalhes}</div>`:''}
+        </div>
+        <div class="aud-right">
+          <div class="aud-user">@${l.usuario_login||'—'} <span style="font-weight:400;color:var(--muted)">(${l.usuario_nivel||'—'})</span></div>
+          <div class="aud-time">${fmtTs(l.criado_em)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function setAudFiltro(f){ _audFiltro=f; renderHistorico(); }
+function setAudFiltro(f) { _audFiltro = f; renderHistorico(); }
 
-function exportarAuditoria(){
-  const data={auditoria:getLogs(),exportado:new Date().toISOString(),sistema:'Rocha Reboques'};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`auditoria-rocha-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
-  toast('Log exportado!','success');
+async function exportarAuditoria() {
+  try {
+    const logs = await api.get('/api/auditoria?limit=500');
+    const blob = new Blob([JSON.stringify({auditoria:logs,exportado:new Date().toISOString()},null,2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `auditoria-rocha-${today()}.json`; a.click(); URL.revokeObjectURL(a.href);
+    toast('Log exportado!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-function limparAuditoria(){
-  confirmar('Limpar Histórico','Apagar todos os registros de auditoria? Esta ação não pode ser desfeita.',()=>{
-    setLogs([]);
-    auditLog('excluir','Auditoria','Log de auditoria foi limpo');
-    renderHistorico();
-    toast('Histórico limpo.','info');
+async function limparAuditoria() {
+  confirmar('Limpar Histórico','Apagar todos os registros de auditoria?', async () => {
+    try { await api.del('/api/auditoria'); await renderHistorico(); toast('Histórico limpo.','info'); }
+    catch(e) { toast(e.message,'error'); }
   });
 }
 
-/* ══════════════════════════════════════
-   NAVEGAÇÃO — override p/ incluir novas páginas
-══════════════════════════════════════ */
-const _allPages=[...pages,'usuarios','minha-conta','historico'];
-
-function goTo(name){
-  // Bloquear acesso a páginas restritas para auxiliar
-  const restrito=['relatorios','configuracoes','usuarios','historico'];
-  if(restrito.includes(name)&&usuarioAtual?.nivel==='auxiliar'){
-    toast('Acesso restrito a gerentes.','error');
-    return;
-  }
-  _allPages.forEach(p=>{
-    const pg=document.getElementById('page-'+p);
-    if(pg) pg.classList.toggle('active',p===name);
-    const nav=document.getElementById('nav-'+p);
-    if(nav) nav.classList.toggle('active',p===name);
-  });
-  currentPage=name;
-  closeSidebar();
-  document.getElementById('user-dropdown')?.classList.remove('show');
-  const renders={
-    dashboard:renderDashboard,
-    alugueis:renderAlugueis,
-    devolucoes:renderDevolucoes,
-    reboques:renderReboques,
-    clientes:renderClientes,
-    relatorios:renderRelatorios,
-    usuarios:renderUsuarios,
-    historico:renderHistorico,
-    'minha-conta':renderMinhaConta
+/* ══════════════════════════════════════════════════════
+   CONFIGURAÇÕES
+══════════════════════════════════════════════════════ */
+async function salvarConfig() {
+  const body = {
+    nome:   document.getElementById('cfg-nome').value,
+    tel:    document.getElementById('cfg-tel').value,
+    end:    document.getElementById('cfg-end').value,
+    cidade: document.getElementById('cfg-cidade').value,
+    diaria: document.getElementById('cfg-diaria').value,
+    multa:  document.getElementById('cfg-multa').value,
   };
-  if(renders[name]) renders[name]();
+  try {
+    await api.put('/api/config', body);
+    toast('Configurações salvas!','success');
+  } catch(e) { toast(e.message,'error'); }
 }
 
-/* ══════════════════════════════════════
+async function exportarDados() {
+  try {
+    const [rb, cl, al] = await Promise.all([api.get('/api/reboques'), api.get('/api/clientes'), api.get('/api/alugueis')]);
+    const blob = new Blob([JSON.stringify({reboques:rb,clientes:cl,alugueis:al,exportado:new Date().toISOString()},null,2)],{type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `rocha-reboques-${today()}.json`; a.click(); URL.revokeObjectURL(a.href);
+    toast('Dados exportados!','success');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function limparDados() {
+  confirmar('Limpar Todos os Dados','Esta ação é irreversível. Deseja apagar TODOS os dados?', async () => {
+    try {
+      toast('Funcionalidade disponível apenas via terminal no servidor.','warn');
+    } catch(e) { toast(e.message,'error'); }
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   TOPBAR / SIDEBAR AUTH UI
+══════════════════════════════════════════════════════ */
+function atualizarTopbar() {
+  if (!usuarioAtual) return;
+  const ini = initials(usuarioAtual.nome);
+  document.getElementById('tb-avatar-txt').textContent = ini || 'U';
+  document.getElementById('tb-uname-txt').textContent  = usuarioAtual.nome.split(' ')[0];
+  document.getElementById('dd-username').textContent   = usuarioAtual.nome;
+  document.getElementById('dd-role').textContent       = usuarioAtual.nivel==='gerente' ? 'Gerente · Acesso Total' : 'Auxiliar · Acesso Limitado';
+  const isGer = usuarioAtual.nivel === 'gerente';
+  ['nav-usuarios','nav-relatorios','nav-historico','nav-configuracoes'].forEach(id=>{
+    const el = document.getElementById(id);
+    if (el) el.style.display = isGer ? 'flex' : 'none';
+  });
+  document.getElementById('dd-gerenciar-wrap').style.display = isGer ? 'block' : 'none';
+}
+
+/* ══════════════════════════════════════════════════════
    INIT
-══════════════════════════════════════ */
-function iniciarSistema(){
-  seedData();
+══════════════════════════════════════════════════════ */
+function iniciarSistema() {
   atualizarTopbar();
-  const now=new Date();
-  document.getElementById('topDate').textContent=now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  const now = new Date();
+  document.getElementById('topDate').textContent = now.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
   goTo('dashboard');
   updateNavBadges();
 }
 
-(function(){
-  seedUsuarios();
+(async function() {
+  // Verifica se o servidor está online
+  try {
+    await fetch(API + '/api/health');
+  } catch {
+    document.getElementById('login-screen').innerHTML = `
+      <div class="login-box">
+        <div class="login-top" style="background:#DC2626;border-bottom-color:#DC2626">
+          <div class="login-logo"><img src="logo.png" alt="Rocha Reboques" style="height:60px;mix-blend-mode:lighten"/></div>
+          <div class="login-welcome" style="margin-top:10px">Servidor Offline</div>
+          <div class="login-welcome-sub">Não foi possível conectar ao servidor.</div>
+        </div>
+        <div class="login-body">
+          <div style="background:rgba(220,38,38,.08);border-left:3px solid #DC2626;padding:14px;font-size:13px;line-height:1.7;color:var(--txt)">
+            <strong>Para iniciar o sistema:</strong><br/>
+            1. Abra o terminal na pasta do projeto<br/>
+            2. Execute: <code style="background:var(--bg);padding:2px 6px;font-family:monospace">npm start</code><br/>
+            3. Recarregue esta página
+          </div>
+          <button class="login-btn" style="margin-top:16px" onclick="location.reload()">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.38"/></svg>
+            Tentar Novamente
+          </button>
+        </div>
+      </div>`;
+    return;
+  }
 
   // Verifica sessão salva
-  const ses=getSessao();
-  if(ses){
-    const u=getUsuarios().find(x=>x.id===ses.id&&x.login===ses.login);
-    if(u){
-      usuarioAtual=u;
+  const savedToken   = sessionStorage.getItem('rr_token');
+  const savedUsuario = sessionStorage.getItem('rr_usuario');
+  if (savedToken && savedUsuario) {
+    try {
+      _token = savedToken;
+      // Valida o token chamando um endpoint protegido
+      await api.get('/api/relatorios/dashboard');
+      usuarioAtual = JSON.parse(savedUsuario);
       document.getElementById('login-screen').classList.add('hidden');
       iniciarSistema();
       return;
+    } catch {
+      sessionStorage.removeItem('rr_token');
+      sessionStorage.removeItem('rr_usuario');
+      _token = null;
     }
   }
-  // Sem sessão válida — mostra login
   document.getElementById('login-user').focus();
 })();
 </script>
