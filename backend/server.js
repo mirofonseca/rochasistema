@@ -430,3 +430,4 @@ initDB().then(() => {
     console.log(`║  ENV:  ${process.env.NODE_ENV||'development'}                    ║`);
     console.log(`╚═══════════════════════════════════════╝\n`);
   });
+});
