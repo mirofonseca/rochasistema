@@ -3,13 +3,19 @@ const path = require('path');
 const fs   = require('fs');
 
 // ── Database file location ─────────────────────────────
-const DB_DIR  = path.join(__dirname, '..', 'data');
+// Railway: use env var RAILWAY_VOLUME_MOUNT_PATH if set
+// Local:   use /data folder relative to project root
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  || process.env.DATA_DIR
+  || path.join(__dirname, '..', 'data');
+
+const DB_DIR  = DATA_DIR;
 const DB_FILE = path.join(DB_DIR, 'rochasistema.db');
 
 // ── Ensure data/ folder exists ─────────────────────────
 if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
-  console.log('[DB] Pasta /data criada.');
+  console.log('[DB] Pasta criada:', DB_DIR);
 }
 
 // ── Load sql.js ────────────────────────────────────────

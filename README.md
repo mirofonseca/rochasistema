@@ -1,80 +1,100 @@
 # Rocha Reboques — Sistema de Gestão
 
-Sistema completo de gestão de aluguel de reboques com autenticação, auditoria e banco de dados SQLite.
+Sistema completo de gestão de aluguel de reboques com autenticação, auditoria e banco SQLite.
 
-## ⚙️ Requisitos
-- Node.js ≥ 18
+---
 
-## 🚀 Instalação e Execução
+## 🚀 Deploy Online — Railway (recomendado)
+
+### Passo a passo:
+
+1. Acesse **[railway.app](https://railway.app)** e clique em **"Start a New Project"**
+2. Escolha **"Deploy from GitHub repo"**
+3. Conecte sua conta GitHub e selecione **`mirofonseca/rochasistema`**
+4. Railway detecta o `Dockerfile` automaticamente — clique **"Deploy Now"**
+5. Após o build (≈2 min), vá em **Settings → Networking → Generate Domain**
+6. Acesse a URL gerada (ex: `https://rochasistema.up.railway.app`)
+
+### ⚠️ Volume para persistência do banco (importante):
+Sem volume, o banco SQLite é perdido a cada redeploy.
+
+1. No painel do serviço → **"Add Volume"**
+2. Mount Path: `/app/data`
+3. Clique **"Add"** — Railway reinicia o serviço com volume persistente
+
+---
+
+## 💻 Rodar Local
 
 ```bash
-# 1. Instalar dependências
+git clone https://github.com/mirofonseca/rochasistema.git
+cd rochasistema
 npm install
-
-# 2. Iniciar o servidor
 npm start
-
-# 3. Acessar no navegador
-http://localhost:3000
 ```
+Acesse: **http://localhost:3000**
+
+---
+
+## 🐳 Docker Local
+
+```bash
+docker-compose up --build
+```
+Acesse: **http://localhost:3000**
+
+---
+
+## 🔑 Credenciais Padrão
+| Campo | Valor |
+|-------|-------|
+| Usuário | `admin` |
+| Senha | `admin123` |
+
+---
 
 ## 🗄️ Banco de Dados
 
-O banco SQLite é criado automaticamente em `data/rochasistema.db` na primeira execução.
+Criado automaticamente em `data/rochasistema.db` na primeira execução.
 
-**Tabelas:**
-| Tabela       | Descrição                          |
-|--------------|------------------------------------|
-| `usuarios`   | Usuários do sistema (gerente/auxiliar) |
-| `reboques`   | Frota de reboques                  |
-| `clientes`   | Cadastro de clientes               |
-| `alugueis`   | Registro de aluguéis               |
-| `auditoria`  | Log completo de todas as ações     |
-| `config`     | Configurações do sistema           |
+| Tabela | Descrição |
+|--------|-----------|
+| `usuarios` | Usuários (gerente/auxiliar) |
+| `reboques` | Frota de reboques |
+| `clientes` | Cadastro de clientes |
+| `alugueis` | Registro de aluguéis |
+| `auditoria` | Log de todas as ações |
+| `config` | Configurações do sistema |
 
-## 🔑 Credenciais Padrão
-- **Usuário:** admin  
-- **Senha:** admin123
+---
 
-## 📡 API REST
+## 📡 API Endpoints
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| POST | /api/auth/login | Login |
-| POST | /api/auth/logout | Logout |
-| PUT | /api/auth/senha | Alterar própria senha |
-| GET | /api/reboques | Listar reboques |
-| POST | /api/reboques | Criar reboque |
-| PUT | /api/reboques/:id | Editar reboque |
-| DELETE | /api/reboques/:id | Excluir reboque |
-| GET | /api/clientes | Listar clientes |
-| POST | /api/clientes | Criar cliente |
-| PUT | /api/clientes/:id | Editar cliente |
-| DELETE | /api/clientes/:id | Excluir cliente |
-| GET | /api/alugueis | Listar aluguéis |
-| POST | /api/alugueis | Criar aluguel |
-| PUT | /api/alugueis/:id | Editar aluguel |
-| POST | /api/alugueis/:id/encerrar | Encerrar aluguel (requer pag=pago) |
-| DELETE | /api/alugueis/:id | Excluir aluguel |
-| GET | /api/usuarios | Listar usuários (gerente) |
-| POST | /api/usuarios | Criar usuário (gerente) |
-| PUT | /api/usuarios/:id | Editar usuário (gerente) |
-| DELETE | /api/usuarios/:id | Excluir usuário (gerente) |
-| GET | /api/auditoria | Log de auditoria (gerente) |
-| GET | /api/relatorios/dashboard | Resumo financeiro |
-| GET | /api/health | Health check |
+| GET | `/api/health` | Status do servidor |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+| GET/POST/PUT/DELETE | `/api/reboques/:id` | CRUD reboques |
+| GET/POST/PUT/DELETE | `/api/clientes/:id` | CRUD clientes |
+| GET/POST/PUT/DELETE | `/api/alugueis/:id` | CRUD aluguéis |
+| POST | `/api/alugueis/:id/encerrar` | Encerrar aluguel |
+| GET/POST/PUT/DELETE | `/api/usuarios/:id` | CRUD usuários (gerente) |
+| GET/DELETE | `/api/auditoria` | Log de auditoria (gerente) |
+| GET | `/api/relatorios/dashboard` | Resumo financeiro |
+| GET | `/api/relatorios/receita-reboque` | Receita por reboque |
+| GET | `/api/relatorios/top-clientes` | Top clientes |
+| GET/PUT | `/api/config` | Configurações |
 
-## 🛠️ Scripts úteis
+**Autenticação:** header `x-auth-token: <token>` em todas as rotas (exceto `/api/health` e `/api/auth/login`).
+
+---
+
+## 🛠️ Scripts
 
 ```bash
-npm run db:reset   # Apaga o banco (reinicia zerado)
-npm run db:info    # Mostra tabelas e contagens no terminal
-npm run dev        # Inicia com hot-reload (Node --watch)
+npm start       # Inicia o servidor
+npm run dev     # Inicia com hot-reload
+npm run db:info # Info do banco no terminal
+npm run db:reset # Apaga o banco (reinicia zerado)
 ```
-
-## 🔐 Autenticação
-Todas as rotas (exceto `/api/auth/login` e `/api/health`) requerem o header:
-```
-x-auth-token: <token_base64>
-```
-O token é retornado no login e deve ser enviado em todas as requisições subsequentes.

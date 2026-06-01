@@ -8,8 +8,10 @@ const { initDB, all, get, run, uid } = require('./database');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// CORS — aceita qualquer origem (necessário para Railway e acesso externo)
+app.use(cors({ origin: '*', methods: ['GET','POST','PUT','DELETE','OPTIONS'], allowedHeaders: ['Content-Type','x-auth-token'] }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 // ── Serve static files (frontend) ─────────────────────
 app.use(express.static(path.join(__dirname, '..')));
