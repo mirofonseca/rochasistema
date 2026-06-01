@@ -428,6 +428,12 @@ initDB().then(() => {
     console.log(`║  ENV:  ${process.env.NODE_ENV||'development'}                    ║`);
     console.log(`╚═══════════════════════════════════════╝\n`);
   });
+
+  git clone https://github.com/mirofonseca/rochasistema.git
+cd rochasistema
+npm install
+npm start
+
 }).catch(err => {
   console.error('[FATAL] Falha ao iniciar banco:', err.message);
   process.exit(1);
