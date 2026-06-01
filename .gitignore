@@ -1,4 +1,23 @@
+# Dependências
 node_modules/
-data/
-.env
+
+# Banco de dados (gerado automaticamente na inicialização)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Logs
 *.log
+npm-debug.log*
+
+# Ambiente
+.env
+.env.local
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Auditoria exportada
+auditoria-*.json
+rocha-reboques-*.json
