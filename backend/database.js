@@ -101,6 +101,8 @@ function createSchema() {
       cidade       TEXT,
       cnh          TEXT,
       cat_cnh      TEXT,
+      renavan      TEXT,
+      placa_veiculo TEXT,
       obs          TEXT,
       criado_em    TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );
@@ -154,6 +156,13 @@ function createSchema() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_alugueis_reboque ON alugueis(reboque_id);`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_alugueis_status  ON alugueis(status);`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_auditoria_ts     ON auditoria(criado_em DESC);`);
+
+  // Migrações para bancos existentes (ignora erro se coluna já existir)
+  const migrations = [
+    `ALTER TABLE clientes ADD COLUMN renavan TEXT`,
+    `ALTER TABLE clientes ADD COLUMN placa_veiculo TEXT`,
+  ];
+  migrations.forEach(sql => { try { db.run(sql); } catch(e) { /* coluna já existe */ } });
 
   console.log('[DB] Schema verificado/criado com sucesso.');
 }
