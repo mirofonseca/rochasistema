@@ -9,8 +9,11 @@ RUN npm install --production
 # Copia projeto
 COPY . .
 
-# Cria pasta de dados
+# Cria pasta de dados LOCAL (fallback se não houver Volume no Railway)
 RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Cria também /data que é onde o Volume Railway será montado
+RUN mkdir -p /data && chmod 777 /data
 
 EXPOSE 3000
 

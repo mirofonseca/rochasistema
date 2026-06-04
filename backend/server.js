@@ -3,7 +3,8 @@ const express = require('express');
 const cors    = require('cors');
 const crypto  = require('crypto');
 const path    = require('path');
-const { initDB, all, get, run, uid } = require('./database');
+const fs      = require('fs');
+const { initDB, all, get, run, uid, persistDB } = require('./database');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -402,6 +403,33 @@ app.put('/api/config', auth, gerente, (req, res) => {
   auditoria('config','Configuração','Configurações atualizadas',
     Object.entries(req.body).map(([k,v])=>`${k}=${v}`).join(' · '), req.user);
   res.json({ ok: true });
+});
+
+// ── Backup / Restore do banco ─────────────────────────
+const { DB_FILE } = require('./database');
+
+app.get('/api/admin/backup', auth, gerente, (req, res) => {
+  try {
+    persistDB();
+    const buf = fs.readFileSync(DB_FILE);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="rochasistema-backup-${new Date().toISOString().slice(0,10)}.db"`);
+    res.send(buf);
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao gerar backup: ' + e.message });
+  }
+});
+
+app.post('/api/admin/restore', auth, gerente, express.raw({ type: 'application/octet-stream', limit: '50mb' }), (req, res) => {
+  try {
+    if (!req.body || !req.body.length) return res.status(400).json({ error: 'Arquivo inválido' });
+    const tmp = DB_FILE + '.restore.tmp';
+    fs.writeFileSync(tmp, req.body);
+    fs.renameSync(tmp, DB_FILE);
+    res.json({ ok: true, msg: 'Banco restaurado. Reinicie o servidor para aplicar.' });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao restaurar: ' + e.message });
+  }
 });
 
 // ── Health check ──────────────────────────────────────
