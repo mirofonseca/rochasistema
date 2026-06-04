@@ -2,18 +2,14 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copia dependências
 COPY package*.json ./
 RUN npm install --production
 
-# Copia projeto
 COPY . .
 
-# Cria pasta de dados LOCAL (fallback se não houver Volume no Railway)
-RUN mkdir -p /app/data && chmod 777 /app/data
-
-# Cria também /data que é onde o Volume Railway será montado
-RUN mkdir -p /data && chmod 777 /data
+# /data = Volume persistente Railway (configurar no dashboard)
+# /app/data = fallback para desenvolvimento local
+RUN mkdir -p /data /app/data && chmod 777 /data /app/data
 
 EXPOSE 3000
 
