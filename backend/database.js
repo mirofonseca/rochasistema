@@ -24,6 +24,19 @@ console.log('[DB] Diretório de dados:', DATA_DIR);
 console.log('[DB] Arquivo do banco:  ', DB_FILE);
 console.log('[DB] Banco existente:   ', fs.existsSync(DB_FILE) ? 'SIM ✓' : 'NÃO — criando novo');
 
+// Diagnóstico de persistência: avisa se está rodando no Railway sem Volume.
+// O Railway só injeta RAILWAY_VOLUME_MOUNT_PATH quando há um Volume montado de verdade.
+const noRailway = !process.env.RAILWAY_ENVIRONMENT;
+const hasVolume = !!process.env.RAILWAY_VOLUME_MOUNT_PATH;
+if (noRailway) {
+  console.log('[DB] Persistência:        LOCAL (dev)');
+} else if (hasVolume) {
+  console.log('[DB] Persistência:        VOLUME ✓ (' + process.env.RAILWAY_VOLUME_MOUNT_PATH + ') — dados sobrevivem a deploys');
+} else {
+  console.warn('[DB] ⚠️  ATENÇÃO: rodando no Railway SEM Volume montado.');
+  console.warn('[DB] ⚠️  O banco será PERDIDO no próximo deploy. Monte um Volume em /data.');
+}
+
 const initSqlJs = require('sql.js');
 let db = null;
 
