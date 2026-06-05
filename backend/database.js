@@ -143,6 +143,20 @@ function createSchema() {
     );`);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS manutencoes (
+      id          TEXT PRIMARY KEY,
+      reboque_id  TEXT NOT NULL REFERENCES reboques(id),
+      tipo        TEXT NOT NULL,
+      custo       REAL NOT NULL DEFAULT 0,
+      status      TEXT NOT NULL DEFAULT 'em_andamento'
+                  CHECK(status IN ('em_andamento','concluida')),
+      obs         TEXT,
+      data_inicio TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+      data_fim    TEXT,
+      criado_em   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );`);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS auditoria (
       id            TEXT PRIMARY KEY,
       tipo          TEXT NOT NULL,
@@ -167,6 +181,8 @@ function createSchema() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_al_reboque  ON alugueis(reboque_id);`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_al_status   ON alugueis(status);`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_aud_ts      ON auditoria(criado_em DESC);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_man_reboque ON manutencoes(reboque_id);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_man_status  ON manutencoes(status);`);
 
   // Migrações para bancos existentes (silencioso se coluna já existir)
   [

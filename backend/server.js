@@ -328,6 +328,86 @@ app.delete('/api/alugueis/:id', auth, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════
+// MANUTENÇÕES
+// ═══════════════════════════════════════════════════════
+const MANUTENCAO_SELECT = `
+  SELECT m.*, r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo
+  FROM manutencoes m
+  JOIN reboques r ON r.id = m.reboque_id
+`;
+
+app.get('/api/manutencoes', auth, (req, res) => {
+  res.json(all(`${MANUTENCAO_SELECT} ORDER BY m.criado_em DESC`));
+});
+
+app.get('/api/manutencoes/:id', auth, (req, res) => {
+  const row = get(`${MANUTENCAO_SELECT} WHERE m.id=?`,[req.params.id]);
+  if (!row) return res.status(404).json({ error: 'Manutenção não encontrada' });
+  res.json(row);
+});
+
+app.post('/api/manutencoes', auth, (req, res) => {
+  const { reboque_id, tipo, custo, obs } = req.body;
+  if (!reboque_id || !tipo)
+    return res.status(400).json({ error: 'Campos obrigatórios: reboque_id, tipo' });
+
+  const r = get(`SELECT nome,status FROM reboques WHERE id=?`,[reboque_id]);
+  if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
+  if (r.status === 'alugado')    return res.status(409).json({ error: 'Reboque está alugado' });
+  if (r.status === 'manutencao') return res.status(409).json({ error: 'Reboque já está em manutenção' });
+
+  const id = uid();
+  run(`INSERT INTO manutencoes (id,reboque_id,tipo,custo,obs) VALUES (?,?,?,?,?)`,
+    [id, reboque_id, tipo, Number(custo)||0, obs||null]);
+  run(`UPDATE reboques SET status='manutencao' WHERE id=?`,[reboque_id]);
+
+  auditoria('criar','Manutenção',`Manutenção criada — ${r.nome}`,`Tipo: ${tipo} · R$${Number(custo)||0}`, req.user);
+  res.status(201).json(get(`${MANUTENCAO_SELECT} WHERE m.id=?`,[id]));
+});
+
+app.put('/api/manutencoes/:id', auth, (req, res) => {
+  const m = get(`SELECT * FROM manutencoes WHERE id=?`,[req.params.id]);
+  if (!m) return res.status(404).json({ error: 'Manutenção não encontrada' });
+  const { reboque_id, tipo, custo, status, obs } = req.body;
+
+  // Se trocou de reboque, libera o antigo e bloqueia o novo (se não estiver concluída)
+  if (reboque_id && reboque_id !== m.reboque_id) {
+    run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[m.reboque_id]);
+    if ((status||m.status) !== 'concluida')
+      run(`UPDATE reboques SET status='manutencao' WHERE id=?`,[reboque_id]);
+  }
+
+  run(`UPDATE manutencoes SET reboque_id=?,tipo=?,custo=?,status=?,obs=? WHERE id=?`,
+    [reboque_id||m.reboque_id, tipo||m.tipo, custo??m.custo, status||m.status, obs??m.obs, req.params.id]);
+
+  auditoria('editar','Manutenção',`Manutenção editada`,`Tipo: ${tipo||m.tipo} · Status: ${status||m.status}`, req.user);
+  res.json(get(`${MANUTENCAO_SELECT} WHERE m.id=?`,[req.params.id]));
+});
+
+app.post('/api/manutencoes/:id/concluir', auth, (req, res) => {
+  const m = get(`SELECT * FROM manutencoes WHERE id=?`,[req.params.id]);
+  if (!m) return res.status(404).json({ error: 'Manutenção não encontrada' });
+  if (m.status === 'concluida') return res.status(400).json({ error: 'Manutenção já concluída' });
+
+  run(`UPDATE manutencoes SET status='concluida', data_fim=? WHERE id=?`,[today(), req.params.id]);
+  run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[m.reboque_id]);
+
+  const r = get(`SELECT nome FROM reboques WHERE id=?`,[m.reboque_id]);
+  auditoria('concluir','Manutenção',`Manutenção concluída`,`Reboque ${r?.nome} liberado`, req.user);
+  res.json(get(`${MANUTENCAO_SELECT} WHERE m.id=?`,[req.params.id]));
+});
+
+app.delete('/api/manutencoes/:id', auth, (req, res) => {
+  const m = get(`SELECT * FROM manutencoes WHERE id=?`,[req.params.id]);
+  if (!m) return res.status(404).json({ error: 'Manutenção não encontrada' });
+  if (m.status === 'em_andamento')
+    run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[m.reboque_id]);
+  run(`DELETE FROM manutencoes WHERE id=?`,[req.params.id]);
+  auditoria('excluir','Manutenção',`Manutenção excluída`,`Tipo: ${m.tipo} · R$${m.custo}`, req.user);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════
 // AUDITORIA
 // ═══════════════════════════════════════════════════════
 app.get('/api/auditoria', auth, gerente, (req, res) => {
