@@ -127,19 +127,21 @@ function createSchema() {
 
   db.run(`
     CREATE TABLE IF NOT EXISTS alugueis (
-      id          TEXT PRIMARY KEY,
-      cliente_id  TEXT NOT NULL REFERENCES clientes(id),
-      reboque_id  TEXT NOT NULL REFERENCES reboques(id),
-      saida       TEXT NOT NULL,
-      devolucao   TEXT NOT NULL,
-      diaria      REAL NOT NULL,
-      total       REAL NOT NULL,
-      pagamento   TEXT NOT NULL DEFAULT 'pendente'
-                  CHECK(pagamento IN ('pendente','parcial','pago')),
-      status      TEXT NOT NULL DEFAULT 'ativo'
-                  CHECK(status IN ('ativo','encerrado')),
-      obs         TEXT,
-      criado_em   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      id             TEXT PRIMARY KEY,
+      cliente_id     TEXT NOT NULL REFERENCES clientes(id),
+      reboque_id     TEXT NOT NULL REFERENCES reboques(id),
+      saida          TEXT NOT NULL,
+      hora_saida     TEXT NOT NULL DEFAULT '00:00',
+      devolucao      TEXT NOT NULL,
+      hora_devolucao TEXT NOT NULL DEFAULT '00:00',
+      diaria         REAL NOT NULL,
+      total          REAL NOT NULL,
+      pagamento      TEXT NOT NULL DEFAULT 'pendente'
+                     CHECK(pagamento IN ('pendente','parcial','pago')),
+      status         TEXT NOT NULL DEFAULT 'ativo'
+                     CHECK(status IN ('ativo','encerrado')),
+      obs            TEXT,
+      criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );`);
 
   db.run(`
@@ -188,6 +190,8 @@ function createSchema() {
   [
     `ALTER TABLE clientes ADD COLUMN renavan TEXT`,
     `ALTER TABLE clientes ADD COLUMN placa_veiculo TEXT`,
+    `ALTER TABLE alugueis ADD COLUMN hora_saida TEXT DEFAULT '00:00'`,
+    `ALTER TABLE alugueis ADD COLUMN hora_devolucao TEXT DEFAULT '00:00'`,
   ].forEach(sql => { try { db.run(sql); } catch(e) {} });
 
   console.log('[DB] Schema OK ✓');

@@ -259,7 +259,7 @@ app.get('/api/alugueis/:id', auth, (req, res) => {
 });
 
 app.post('/api/alugueis', auth, (req, res) => {
-  const { cliente_id, reboque_id, saida, devolucao, diaria, total, pagamento, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, obs } = req.body;
   if (!cliente_id || !reboque_id || !saida || !devolucao)
     return res.status(400).json({ error: 'Campos obrigatórios: cliente_id, reboque_id, saida, devolucao' });
 
@@ -268,33 +268,38 @@ app.post('/api/alugueis', auth, (req, res) => {
   const r = get(`SELECT nome,status FROM reboques WHERE id=?`,[reboque_id]);
   if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
   if (r.status === 'manutencao') return res.status(409).json({ error: 'Reboque em manutenção' });
-  if (r.status === 'alugado') return res.status(409).json({ error: 'Reboque já está alugado' });
+  if (r.status === 'alugado')    return res.status(409).json({ error: 'Reboque já está alugado' });
 
-  const id = uid();
-  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,devolucao,diaria,total,pagamento,obs)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-    [id, cliente_id, reboque_id, saida, devolucao, diaria, total, pagamento||'pendente', obs||null]);
+  const id  = uid();
+  const hs  = hora_saida      || '00:00';
+  const hd  = hora_devolucao  || '00:00';
+  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,obs)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', obs||null]);
   run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
 
-  auditoria('criar','Aluguel',`Aluguel criado — ${c.nome}`,`Reboque: ${r.nome} · ${saida}→${devolucao} · R$${total} · ${pagamento}`, req.user);
+  auditoria('criar','Aluguel',`Aluguel criado — ${c.nome}`,
+    `Reboque: ${r.nome} · ${saida} ${hs} → ${devolucao} ${hd} · R$${total} · ${pagamento}`, req.user);
   res.status(201).json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[id]));
 });
 
 app.put('/api/alugueis/:id', auth, (req, res) => {
   const a = get(`SELECT * FROM alugueis WHERE id=?`,[req.params.id]);
   if (!a) return res.status(404).json({ error: 'Aluguel não encontrado' });
-  const { cliente_id, reboque_id, saida, devolucao, diaria, total, pagamento, status, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, status, obs } = req.body;
 
-  // Se mudou reboque, libera o antigo
   if (reboque_id && reboque_id !== a.reboque_id) {
     run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[a.reboque_id]);
     if (status !== 'encerrado')
       run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
   }
 
-  run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,devolucao=?,diaria=?,total=?,pagamento=?,status=?,obs=? WHERE id=?`,
-    [cliente_id||a.cliente_id, reboque_id||a.reboque_id, saida||a.saida, devolucao||a.devolucao,
-     diaria||a.diaria, total||a.total, pagamento||a.pagamento, status||a.status, obs??a.obs, req.params.id]);
+  run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,obs=? WHERE id=?`,
+    [cliente_id||a.cliente_id, reboque_id||a.reboque_id,
+     saida||a.saida,           hora_saida||a.hora_saida||'00:00',
+     devolucao||a.devolucao,   hora_devolucao||a.hora_devolucao||'00:00',
+     diaria||a.diaria, total||a.total, pagamento||a.pagamento,
+     status||a.status, obs??a.obs, req.params.id]);
 
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id||a.cliente_id]);
   auditoria('editar','Aluguel',`Aluguel editado — ${c?.nome}`,`Pag: ${pagamento} · Status: ${status}`, req.user);
