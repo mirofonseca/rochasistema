@@ -14,7 +14,7 @@ function confirmarNao(){document.getElementById("confirm-overlay").classList.rem
 
 function badgeSt(e){const[t,a]={ativo:["bd-ativo","Ativo"],atrasado:["bd-atrasado","Atrasado"],encerrado:["bd-encerrado","Encerrado"],disponivel:["bd-disponivel","Disponível"],alugado:["bd-ativo","Alugado"],manutencao:["bd-manutencao","Manutenção"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}"><span class="bd-dot"></span>${a}</span>`}
 
-function badgePag(e){const[t,a]={pago:["bd-pago","Pago"],pendente:["bd-pendente","Pendente"],parcial:["bd-parcial","Parcial"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}">${a}</span>`}let currentPage="dashboard";const _allPages=["dashboard","alugueis","devolucoes","reboques","manutencao","clientes","relatorios","configuracoes","usuarios","minha-conta","historico"];
+function badgePag(e){const[t,a]={pago:["bd-pago","Pago"],pendente:["bd-pendente","Pendente"],parcial:["bd-parcial","Parcial"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}">${a}</span>`}
 
 function abrirModal(e){document.getElementById(e).classList.add("open")}
 

@@ -14,4 +14,4 @@ async function salvarManutencao(){const id=document.getElementById("mn-id").valu
 
 async function concluirManutencao(id){confirmar("Concluir Manutenção","Confirma a conclusão? O reboque será liberado.",async()=>{try{await api.post(`/api/manutencoes/${id}/concluir`),toast("Manutenção concluída. Reboque liberado.","success"),await renderManutencao(),renderReboques()}catch(e){toast(e.message,"error")}},!1)}
 
-async function excluirManutencao(id){confirmar("Excluir Manutenção","Esta ação não pode ser desfeita. Deseja excluir esta manutenção?",async()=>{try{await api.del(`/api/manutencoes/${id}`),toast("Manutenção excluída.","info"),await renderManutencao(),renderReboques()}catch(e){toast(e.message,"error")}})}let _rbCache=[];
+async function excluirManutencao(id){confirmar("Excluir Manutenção","Esta ação não pode ser desfeita. Deseja excluir esta manutenção?",async()=>{try{await api.del(`/api/manutencoes/${id}`),toast("Manutenção excluída.","info"),await renderManutencao(),renderReboques()}catch(e){toast(e.message,"error")}})}
