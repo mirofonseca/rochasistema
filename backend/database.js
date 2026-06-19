@@ -121,6 +121,7 @@ function createSchema() {
       cat_cnh       TEXT,
       renavan       TEXT,
       placa_veiculo TEXT,
+      cep           TEXT,
       obs           TEXT,
       criado_em     TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );`);
@@ -190,6 +191,7 @@ function createSchema() {
   [
     `ALTER TABLE clientes ADD COLUMN renavan TEXT`,
     `ALTER TABLE clientes ADD COLUMN placa_veiculo TEXT`,
+    `ALTER TABLE clientes ADD COLUMN cep TEXT`,
     `ALTER TABLE alugueis ADD COLUMN hora_saida TEXT DEFAULT '00:00'`,
     `ALTER TABLE alugueis ADD COLUMN hora_devolucao TEXT DEFAULT '00:00'`,
   ].forEach(sql => { try { db.run(sql); } catch(e) {} });
