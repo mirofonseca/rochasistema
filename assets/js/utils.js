@@ -12,7 +12,7 @@ function confirmarSim(){document.getElementById("confirm-overlay").classList.rem
 
 function confirmarNao(){document.getElementById("confirm-overlay").classList.remove("show")}
 
-function badgeSt(e){const[t,a]={ativo:["bd-ativo","Ativo"],atrasado:["bd-atrasado","Atrasado"],encerrado:["bd-encerrado","Encerrado"],disponivel:["bd-disponivel","Disponível"],alugado:["bd-ativo","Alugado"],manutencao:["bd-manutencao","Manutenção"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}"><span class="bd-dot"></span>${a}</span>`}
+function badgeSt(e){const[t,a]={ativo:["bd-ativo","Ativo"],atrasado:["bd-atrasado","Atrasado"],encerrado:["bd-encerrado","Encerrado"],reservado:["bd-reservado","Reservado"],disponivel:["bd-disponivel","Disponível"],alugado:["bd-ativo","Alugado"],manutencao:["bd-manutencao","Manutenção"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}"><span class="bd-dot"></span>${a}</span>`}
 
 function badgePag(e){const[t,a]={pago:["bd-pago","Pago"],pendente:["bd-pendente","Pendente"],parcial:["bd-parcial","Parcial"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}">${a}</span>`}
 

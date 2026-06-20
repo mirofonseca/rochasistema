@@ -140,7 +140,7 @@ function createSchema() {
       pagamento      TEXT NOT NULL DEFAULT 'pendente'
                      CHECK(pagamento IN ('pendente','parcial','pago')),
       status         TEXT NOT NULL DEFAULT 'ativo'
-                     CHECK(status IN ('ativo','encerrado')),
+                     CHECK(status IN ('ativo','reservado','encerrado')),
       obs            TEXT,
       criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );`);
@@ -196,7 +196,48 @@ function createSchema() {
     `ALTER TABLE alugueis ADD COLUMN hora_devolucao TEXT DEFAULT '00:00'`,
   ].forEach(sql => { try { db.run(sql); } catch(e) {} });
 
+  // Migração: permite status 'reservado' em bancos criados antes desta versão
+  // (SQLite não suporta ALTER de CHECK constraint, então recriamos a tabela)
+  migrarStatusReservado();
+
   console.log('[DB] Schema OK ✓');
+}
+
+function migrarStatusReservado() {
+  try {
+    const row = db.exec(`SELECT sql FROM sqlite_master WHERE type='table' AND name='alugueis'`);
+    const ddl = row[0]?.values[0]?.[0] || '';
+    if (ddl.includes('reservado')) return; // já migrado
+
+    db.run(`
+      CREATE TABLE alugueis_new (
+        id             TEXT PRIMARY KEY,
+        cliente_id     TEXT NOT NULL REFERENCES clientes(id),
+        reboque_id     TEXT NOT NULL REFERENCES reboques(id),
+        saida          TEXT NOT NULL,
+        hora_saida     TEXT NOT NULL DEFAULT '00:00',
+        devolucao      TEXT NOT NULL,
+        hora_devolucao TEXT NOT NULL DEFAULT '00:00',
+        diaria         REAL NOT NULL,
+        total          REAL NOT NULL,
+        pagamento      TEXT NOT NULL DEFAULT 'pendente'
+                       CHECK(pagamento IN ('pendente','parcial','pago')),
+        status         TEXT NOT NULL DEFAULT 'ativo'
+                       CHECK(status IN ('ativo','reservado','encerrado')),
+        obs            TEXT,
+        criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+      );
+    `);
+    db.run(`INSERT INTO alugueis_new SELECT * FROM alugueis;`);
+    db.run(`DROP TABLE alugueis;`);
+    db.run(`ALTER TABLE alugueis_new RENAME TO alugueis;`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_al_cliente  ON alugueis(cliente_id);`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_al_reboque  ON alugueis(reboque_id);`);
+    db.run(`CREATE INDEX IF NOT EXISTS idx_al_status   ON alugueis(status);`);
+    console.log("[DB] Migração: status 'reservado' habilitado em alugueis ✓");
+  } catch (e) {
+    console.error('[DB] Erro na migração de status reservado:', e.message);
+  }
 }
 
 function seedAdminUser() {

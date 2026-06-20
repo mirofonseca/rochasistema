@@ -269,7 +269,7 @@ app.get('/api/alugueis/:id', auth, (req, res) => {
 });
 
 app.post('/api/alugueis', auth, (req, res) => {
-  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, status, obs } = req.body;
   if (!cliente_id || !reboque_id || !saida || !devolucao)
     return res.status(400).json({ error: 'Campos obrigatórios: cliente_id, reboque_id, saida, devolucao' });
 
@@ -280,15 +280,19 @@ app.post('/api/alugueis', auth, (req, res) => {
   if (r.status === 'manutencao') return res.status(409).json({ error: 'Reboque em manutenção' });
   if (r.status === 'alugado')    return res.status(409).json({ error: 'Reboque já está alugado' });
 
-  const id  = uid();
-  const hs  = hora_saida      || '00:00';
-  const hd  = hora_devolucao  || '00:00';
-  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,obs)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', obs||null]);
-  run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
+  const id      = uid();
+  const hs      = hora_saida      || '00:00';
+  const hd      = hora_devolucao  || '00:00';
+  const stFinal = status || 'ativo';
+  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', stFinal, obs||null]);
 
-  auditoria('criar','Aluguel',`Aluguel criado — ${c.nome}`,
+  // Reboque só fica indisponível (alugado) quando o status é Ativo.
+  // Em "Reservado" ele permanece disponível até a saída ser confirmada.
+  if (stFinal === 'ativo') run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
+
+  auditoria('criar','Aluguel',`Aluguel ${stFinal==='reservado'?'reservado':'criado'} — ${c.nome}`,
     `Reboque: ${r.nome} · ${saida} ${hs} → ${devolucao} ${hd} · R$${total} · ${pagamento}`, req.user);
   res.status(201).json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[id]));
 });
@@ -298,21 +302,27 @@ app.put('/api/alugueis/:id', auth, (req, res) => {
   if (!a) return res.status(404).json({ error: 'Aluguel não encontrado' });
   const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, status, obs } = req.body;
 
+  const rbFinal = reboque_id || a.reboque_id;
+  const stFinal = status || a.status;
+
+  // Libera o reboque antigo se trocou de reboque
   if (reboque_id && reboque_id !== a.reboque_id) {
     run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[a.reboque_id]);
-    if (status !== 'encerrado')
-      run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
   }
 
+  // Sincroniza disponibilidade do reboque com o status final do aluguel:
+  // Ativo ocupa o reboque; Reservado e Encerrado o deixam disponível.
+  run(`UPDATE reboques SET status=? WHERE id=?`,[stFinal === 'ativo' ? 'alugado' : 'disponivel', rbFinal]);
+
   run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,obs=? WHERE id=?`,
-    [cliente_id||a.cliente_id, reboque_id||a.reboque_id,
+    [cliente_id||a.cliente_id, rbFinal,
      saida||a.saida,           hora_saida||a.hora_saida||'00:00',
      devolucao||a.devolucao,   hora_devolucao||a.hora_devolucao||'00:00',
      diaria||a.diaria, total||a.total, pagamento||a.pagamento,
-     status||a.status, obs??a.obs, req.params.id]);
+     stFinal, obs??a.obs, req.params.id]);
 
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id||a.cliente_id]);
-  auditoria('editar','Aluguel',`Aluguel editado — ${c?.nome}`,`Pag: ${pagamento} · Status: ${status}`, req.user);
+  auditoria('editar','Aluguel',`Aluguel editado — ${c?.nome}`,`Pag: ${pagamento} · Status: ${stFinal}`, req.user);
   res.json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[req.params.id]));
 });
 
