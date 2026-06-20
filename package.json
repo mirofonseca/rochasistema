@@ -4,14 +4,17 @@
   "description": "Sistema de Gestão de Reboques — Rocha Reboques",
   "main": "backend/server.js",
   "scripts": {
-    "start":    "node backend/server.js",
-    "dev":      "node --watch backend/server.js",
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
     "db:reset": "node -e \"const fs=require('fs');const p='data/rochasistema.db';if(fs.existsSync(p)){fs.unlinkSync(p);console.log('DB removido.')}else{console.log('DB nao existe.')}\"",
-    "db:info":  "node -e \"const {initDB,all}=require('./backend/database');initDB().then(()=>{console.log('Usuarios:',all('SELECT id,nome,login,nivel FROM usuarios'));console.log('Reboques:',all('SELECT id,nome,status FROM reboques').length,'registros');});\""
+    "db:info": "node -e \"const {initDB,all}=require('./backend/database');initDB().then(()=>{console.log('Usuarios:',all('SELECT id,nome,login,nivel FROM usuarios'));console.log('Reboques:',all('SELECT id,nome,status FROM reboques').length,'registros');});\""
   },
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
     "cors": "^2.8.5",
+    "ejs": "^6.0.1",
     "express": "^4.18.2",
     "sql.js": "^1.10.2"
   }

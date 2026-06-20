@@ -1,5 +1,65 @@
 # Rocha Reboques — Sistema de Gestão
 
+## 🏗️ Arquitetura
+
+```
+rochasistema/
+├── backend/
+│   ├── server.js          # API REST + Express
+│   └── database.js        # SQLite (sql.js)
+├── views/                  # Frontend — EJS partials
+│   ├── index.ejs           # Shell principal (monta tudo)
+│   └── partials/
+│       ├── login.ejs
+│       ├── topbar.ejs
+│       ├── sidebar.ejs
+│       ├── overlay.ejs
+│       ├── main-shell.ejs
+│       ├── confirm.ejs
+│       ├── toast.ejs
+│       ├── pages/          # 1 arquivo por página do menu
+│       │   ├── dashboard.ejs
+│       │   ├── alugueis.ejs
+│       │   ├── devolucoes.ejs
+│       │   ├── reboques.ejs
+│       │   ├── manutencao.ejs
+│       │   ├── clientes.ejs
+│       │   ├── relatorios.ejs
+│       │   ├── configuracoes.ejs
+│       │   ├── usuarios.ejs
+│       │   ├── minha-conta.ejs
+│       │   └── historico.ejs
+│       └── modals/         # 1 arquivo por modal
+│           ├── aluguel.ejs
+│           ├── reboque.ejs
+│           ├── cliente.ejs
+│           ├── manutencao.ejs
+│           ├── usuario.ejs
+│           ├── reset-senha.ejs
+│           └── detalhe.ejs
+├── assets/
+│   ├── css/style.css
+│   └── js/                 # 1 arquivo por módulo funcional
+│       ├── app.js          # API client + estado global + init
+│       ├── utils.js        # toast, confirm, navegação
+│       ├── auth.js         # login, logout, sessão
+│       ├── dashboard.js
+│       ├── alugueis.js
+│       ├── devolucoes.js
+│       ├── reboques.js
+│       ├── clientes.js
+│       ├── manutencao.js
+│       ├── relatorios.js
+│       ├── usuarios.js
+│       ├── historico.js
+│       └── config.js
+└── data/                    # Banco SQLite (gerado em runtime)
+```
+
+**Para adicionar uma nova página:** crie `views/partials/pages/nome.ejs`, inclua-a em `partials/main-shell.ejs`, adicione o item no `sidebar.ejs` e crie `assets/js/nome.js` com sua lógica.
+
+---
+
 ## 🚀 Deploy no Railway
 
 1. Acesse [railway.app](https://railway.app) → **New Project → Deploy from GitHub**
