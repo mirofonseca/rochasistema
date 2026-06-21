@@ -162,6 +162,21 @@ function createSchema() {
     );`);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS reservas (
+      id          TEXT PRIMARY KEY,
+      reboque_id  TEXT NOT NULL REFERENCES reboques(id),
+      cliente_id  TEXT NOT NULL REFERENCES clientes(id),
+      data_inicio TEXT NOT NULL,
+      data_fim    TEXT NOT NULL,
+      obs         TEXT,
+      status      TEXT NOT NULL DEFAULT 'ativa'
+                  CHECK(status IN ('ativa','cancelada')),
+      criado_em   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_res_reboque ON reservas(reboque_id);`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_res_status  ON reservas(status);`);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS auditoria (
       id            TEXT PRIMARY KEY,
       tipo          TEXT NOT NULL,

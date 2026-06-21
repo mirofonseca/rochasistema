@@ -12,7 +12,7 @@ function confirmarSim(){document.getElementById("confirm-overlay").classList.rem
 
 function confirmarNao(){document.getElementById("confirm-overlay").classList.remove("show")}
 
-function badgeSt(e){const[t,a]={ativo:["bd-ativo","Ativo"],atrasado:["bd-atrasado","Atrasado"],encerrado:["bd-encerrado","Encerrado"],reservado:["bd-reservado","Reservado"],disponivel:["bd-disponivel","Disponível"],alugado:["bd-ativo","Alugado"],manutencao:["bd-manutencao","Manutenção"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}"><span class="bd-dot"></span>${a}</span>`}
+function badgeSt(e){const[t,a]={ativo:["bd-ativo","Ativo"],atrasado:["bd-atrasado","Atrasado"],encerrado:["bd-encerrado","Encerrado"],disponivel:["bd-disponivel","Disponível"],alugado:["bd-ativo","Alugado"],manutencao:["bd-manutencao","Manutenção"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}"><span class="bd-dot"></span>${a}</span>`}
 
 function badgePag(e){const[t,a]={pago:["bd-pago","Pago"],pendente:["bd-pendente","Pendente"],parcial:["bd-parcial","Parcial"]}[e]||["bd-encerrado",e];return`<span class="badge ${t}">${a}</span>`}
 
@@ -26,6 +26,6 @@ function toggleSidebar(){const e=document.getElementById("sidebar"),t=document.g
 
 function closeSidebar(){document.getElementById("sidebar").classList.remove("open"),document.getElementById("hamburger").classList.remove("open"),document.getElementById("overlay").classList.remove("show")}
 
-function goTo(e){if(["relatorios","configuracoes","usuarios","historico"].includes(e)&&"auxiliar"===usuarioAtual?.nivel)return void toast("Acesso restrito a gerentes.","error");_allPages.forEach(t=>{document.getElementById("page-"+t)?.classList.toggle("active",t===e),document.getElementById("nav-"+t)?.classList.toggle("active",t===e)}),currentPage=e,closeSidebar(),document.getElementById("user-dropdown")?.classList.remove("show");const t={dashboard:renderDashboard,alugueis:renderAlugueis,devolucoes:renderDevolucoes,reboques:renderReboques,manutencao:renderManutencao,clientes:renderClientes,relatorios:renderRelatorios,usuarios:renderUsuarios,historico:renderHistorico,"minha-conta":renderMinhaConta};t[e]&&t[e]()}
+function goTo(e){if(["relatorios","configuracoes","usuarios","historico"].includes(e)&&"auxiliar"===usuarioAtual?.nivel)return void toast("Acesso restrito a gerentes.","error");_allPages.forEach(t=>{document.getElementById("page-"+t)?.classList.toggle("active",t===e),document.getElementById("nav-"+t)?.classList.toggle("active",t===e)}),currentPage=e,closeSidebar(),document.getElementById("user-dropdown")?.classList.remove("show");const t={dashboard:renderDashboard,alugueis:renderAlugueis,reservas:renderReservas,devolucoes:renderDevolucoes,reboques:renderReboques,manutencao:renderManutencao,clientes:renderClientes,relatorios:renderRelatorios,usuarios:renderUsuarios,historico:renderHistorico,"minha-conta":renderMinhaConta};t[e]&&t[e]()}
 
 async function updateNavBadges(){try{const e=await api.get("/api/relatorios/dashboard"),t=document.getElementById("badge-atrasados"),a=document.getElementById("badge-hoje");t&&(t.style.display=e.atrasados>0?"flex":"none",t.textContent=e.atrasados);const n=(await api.get("/api/alugueis")).filter(e=>"ativo"===e.status&&e.devolucao===today()).length;a&&(a.style.display=n>0?"flex":"none",a.textContent=n)}catch{}}

@@ -288,11 +288,10 @@ app.post('/api/alugueis', auth, (req, res) => {
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', stFinal, tipo_pagamento||null, obs||null]);
 
-  // Reboque só fica indisponível (alugado) quando o status é Ativo.
-  // Em "Reservado" ele permanece disponível até a saída ser confirmada.
+  // Reboque fica indisponível (alugado) somente quando o status é Ativo.
   if (stFinal === 'ativo') run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
 
-  auditoria('criar','Aluguel',`Aluguel ${stFinal==='reservado'?'reservado':'criado'} — ${c.nome}`,
+  auditoria('criar','Aluguel',`Aluguel criado — ${c.nome}`,
     `Reboque: ${r.nome} · ${saida} ${hs} → ${devolucao} ${hd} · R$${total} · ${pagamento}`, req.user);
   res.status(201).json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[id]));
 });
@@ -310,8 +309,7 @@ app.put('/api/alugueis/:id', auth, (req, res) => {
     run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[a.reboque_id]);
   }
 
-  // Sincroniza disponibilidade do reboque com o status final do aluguel:
-  // Ativo ocupa o reboque; Reservado e Encerrado o deixam disponível.
+  // Sincroniza disponibilidade do reboque com o status final do aluguel.
   run(`UPDATE reboques SET status=? WHERE id=?`,[stFinal === 'ativo' ? 'alugado' : 'disponivel', rbFinal]);
 
   run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,tipo_pagamento=?,obs=? WHERE id=?`,
@@ -429,6 +427,49 @@ app.delete('/api/manutencoes/:id', auth, (req, res) => {
     run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[m.reboque_id]);
   run(`DELETE FROM manutencoes WHERE id=?`,[req.params.id]);
   auditoria('excluir','Manutenção',`Manutenção excluída`,`Tipo: ${m.tipo} · R$${m.custo}`, req.user);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════
+// RESERVAS
+// ═══════════════════════════════════════════════════════
+const RESERVA_SELECT = `
+  SELECT res.*,
+    c.nome as cliente_nome, c.tel as cliente_tel,
+    r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo
+  FROM reservas res
+  JOIN clientes c ON c.id = res.cliente_id
+  JOIN reboques r ON r.id = res.reboque_id
+`;
+
+app.get('/api/reservas', auth, (req, res) => {
+  res.json(all(`${RESERVA_SELECT} WHERE res.status='ativa' ORDER BY res.data_inicio`));
+});
+
+app.post('/api/reservas', auth, (req, res) => {
+  const { reboque_id, cliente_id, data_inicio, data_fim, obs } = req.body;
+  if (!reboque_id || !cliente_id || !data_inicio || !data_fim)
+    return res.status(400).json({ error: 'Campos obrigatórios: reboque_id, cliente_id, data_inicio, data_fim' });
+  if (new Date(data_fim) < new Date(data_inicio))
+    return res.status(400).json({ error: 'Data final deve ser igual ou posterior à data inicial' });
+
+  const r = get(`SELECT nome FROM reboques WHERE id=?`,[reboque_id]);
+  if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
+  const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id]);
+  if (!c) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+  const id = uid();
+  run(`INSERT INTO reservas (id,reboque_id,cliente_id,data_inicio,data_fim,obs) VALUES (?,?,?,?,?,?)`,
+    [id, reboque_id, cliente_id, data_inicio, data_fim, obs||null]);
+  auditoria('criar','Reserva',`Reserva criada — ${c.nome}`,`Reboque: ${r.nome} · ${data_inicio} → ${data_fim}`, req.user);
+  res.status(201).json(get(`${RESERVA_SELECT} WHERE res.id=?`,[id]));
+});
+
+app.delete('/api/reservas/:id', auth, (req, res) => {
+  const r = get(`${RESERVA_SELECT} WHERE res.id=?`,[req.params.id]);
+  if (!r) return res.status(404).json({ error: 'Reserva não encontrada' });
+  run(`UPDATE reservas SET status='cancelada' WHERE id=?`,[req.params.id]);
+  auditoria('excluir','Reserva',`Reserva cancelada — ${r.cliente_nome}`,`Reboque: ${r.reboque_nome}`, req.user);
   res.json({ ok: true });
 });
 
