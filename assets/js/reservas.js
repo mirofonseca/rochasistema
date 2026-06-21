@@ -94,3 +94,26 @@ async function cancelarReserva(id){
     }catch(e){ toast(e.message,"error"); }
   });
 }
+
+/* Cria uma reserva diretamente a partir do formulário de Novo Aluguel,
+   reaproveitando os mesmos campos (cliente, reboque, datas, obs) */
+async function salvarComoReserva(){
+  const cliente_id  = document.getElementById("al-cliente-sel").value;
+  const reboque_id  = document.getElementById("al-reboque-sel").value;
+  const data_inicio = document.getElementById("al-saida").value;
+  const data_fim    = document.getElementById("al-devolucao").value;
+  const obs         = document.getElementById("al-obs").value;
+
+  if(!cliente_id){ toast("Selecione um cliente","error"); return; }
+  if(!reboque_id){ toast("Selecione um reboque","error"); return; }
+  if(!data_inicio || !data_fim){ toast("Preencha as datas","error"); return; }
+  if(new Date(data_fim) < new Date(data_inicio)){ toast("Data de devolução deve ser igual ou posterior à saída","error"); return; }
+
+  try{
+    await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, obs });
+    toast("Reserva criada com sucesso!","success");
+    fecharModal("modal-aluguel");
+    if(currentPage === "reservas") renderReservas();
+    else if(currentPage === "alugueis") renderAlugueis();
+  }catch(e){ toast(e.message,"error"); }
+}
