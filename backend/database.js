@@ -141,6 +141,8 @@ function createSchema() {
                      CHECK(pagamento IN ('pendente','parcial','pago')),
       status         TEXT NOT NULL DEFAULT 'ativo'
                      CHECK(status IN ('ativo','reservado','encerrado')),
+      tipo_pagamento TEXT
+                     CHECK(tipo_pagamento IS NULL OR tipo_pagamento IN ('pix_maquina','pix_jonatas','cartao')),
       obs            TEXT,
       criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );`);
@@ -194,6 +196,7 @@ function createSchema() {
     `ALTER TABLE clientes ADD COLUMN cep TEXT`,
     `ALTER TABLE alugueis ADD COLUMN hora_saida TEXT DEFAULT '00:00'`,
     `ALTER TABLE alugueis ADD COLUMN hora_devolucao TEXT DEFAULT '00:00'`,
+    `ALTER TABLE alugueis ADD COLUMN tipo_pagamento TEXT`,
   ].forEach(sql => { try { db.run(sql); } catch(e) {} });
 
   // Migração: permite status 'reservado' em bancos criados antes desta versão
@@ -224,11 +227,13 @@ function migrarStatusReservado() {
                        CHECK(pagamento IN ('pendente','parcial','pago')),
         status         TEXT NOT NULL DEFAULT 'ativo'
                        CHECK(status IN ('ativo','reservado','encerrado')),
+        tipo_pagamento TEXT,
         obs            TEXT,
         criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
       );
     `);
-    db.run(`INSERT INTO alugueis_new SELECT * FROM alugueis;`);
+    db.run(`INSERT INTO alugueis_new (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs,criado_em)
+            SELECT id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs,criado_em FROM alugueis;`);
     db.run(`DROP TABLE alugueis;`);
     db.run(`ALTER TABLE alugueis_new RENAME TO alugueis;`);
     db.run(`CREATE INDEX IF NOT EXISTS idx_al_cliente  ON alugueis(cliente_id);`);

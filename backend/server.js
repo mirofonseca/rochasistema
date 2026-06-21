@@ -269,7 +269,7 @@ app.get('/api/alugueis/:id', auth, (req, res) => {
 });
 
 app.post('/api/alugueis', auth, (req, res) => {
-  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, status, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, tipo_pagamento, status, obs } = req.body;
   if (!cliente_id || !reboque_id || !saida || !devolucao)
     return res.status(400).json({ error: 'Campos obrigatórios: cliente_id, reboque_id, saida, devolucao' });
 
@@ -284,9 +284,9 @@ app.post('/api/alugueis', auth, (req, res) => {
   const hs      = hora_saida      || '00:00';
   const hd      = hora_devolucao  || '00:00';
   const stFinal = status || 'ativo';
-  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', stFinal, obs||null]);
+  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,tipo_pagamento,obs)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', stFinal, tipo_pagamento||null, obs||null]);
 
   // Reboque só fica indisponível (alugado) quando o status é Ativo.
   // Em "Reservado" ele permanece disponível até a saída ser confirmada.
@@ -300,7 +300,7 @@ app.post('/api/alugueis', auth, (req, res) => {
 app.put('/api/alugueis/:id', auth, (req, res) => {
   const a = get(`SELECT * FROM alugueis WHERE id=?`,[req.params.id]);
   if (!a) return res.status(404).json({ error: 'Aluguel não encontrado' });
-  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, status, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, tipo_pagamento, status, obs } = req.body;
 
   const rbFinal = reboque_id || a.reboque_id;
   const stFinal = status || a.status;
@@ -314,12 +314,12 @@ app.put('/api/alugueis/:id', auth, (req, res) => {
   // Ativo ocupa o reboque; Reservado e Encerrado o deixam disponível.
   run(`UPDATE reboques SET status=? WHERE id=?`,[stFinal === 'ativo' ? 'alugado' : 'disponivel', rbFinal]);
 
-  run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,obs=? WHERE id=?`,
+  run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,tipo_pagamento=?,obs=? WHERE id=?`,
     [cliente_id||a.cliente_id, rbFinal,
      saida||a.saida,           hora_saida||a.hora_saida||'00:00',
      devolucao||a.devolucao,   hora_devolucao||a.hora_devolucao||'00:00',
      diaria||a.diaria, total||a.total, pagamento||a.pagamento,
-     stFinal, obs??a.obs, req.params.id]);
+     stFinal, tipo_pagamento??a.tipo_pagamento, obs??a.obs, req.params.id]);
 
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id||a.cliente_id]);
   auditoria('editar','Aluguel',`Aluguel editado — ${c?.nome}`,`Pag: ${pagamento} · Status: ${stFinal}`, req.user);
