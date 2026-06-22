@@ -465,6 +465,31 @@ app.post('/api/reservas', auth, (req, res) => {
   res.status(201).json(get(`${RESERVA_SELECT} WHERE res.id=?`,[id]));
 });
 
+app.post('/api/reservas/:id/iniciar', auth, (req, res) => {
+  const resv = get(`SELECT * FROM reservas WHERE id=? AND status='ativa'`,[req.params.id]);
+  if (!resv) return res.status(404).json({ error: 'Reserva não encontrada ou já cancelada' });
+
+  const r = get(`SELECT * FROM reboques WHERE id=?`,[resv.reboque_id]);
+  if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
+  if (r.status === 'manutencao') return res.status(409).json({ error: 'Reboque em manutenção' });
+  if (r.status === 'alugado')    return res.status(409).json({ error: 'Reboque já está alugado' });
+
+  const c = get(`SELECT nome FROM clientes WHERE id=?`,[resv.cliente_id]);
+
+  const dias  = Math.max(1, Math.round((new Date(resv.data_fim) - new Date(resv.data_inicio)) / 86400000) || 1);
+  const total = dias * r.diaria;
+  const id    = uid();
+
+  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, resv.cliente_id, resv.reboque_id, resv.data_inicio, '08:00', resv.data_fim, '08:00', r.diaria, total, 'pendente', 'ativo', resv.obs||null]);
+  run(`UPDATE reboques SET status='alugado' WHERE id=?`,[resv.reboque_id]);
+  run(`UPDATE reservas SET status='cancelada' WHERE id=?`,[req.params.id]);
+
+  auditoria('criar','Aluguel',`Aluguel iniciado a partir de reserva — ${c?.nome}`,`Reboque: ${r.nome} · ${resv.data_inicio} → ${resv.data_fim}`, req.user);
+  res.status(201).json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[id]));
+});
+
 app.delete('/api/reservas/:id', auth, (req, res) => {
   const r = get(`${RESERVA_SELECT} WHERE res.id=?`,[req.params.id]);
   if (!r) return res.status(404).json({ error: 'Reserva não encontrada' });

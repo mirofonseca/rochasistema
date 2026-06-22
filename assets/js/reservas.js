@@ -26,6 +26,7 @@ async function renderReservas(){
           <div class="al-right">
             <span class="badge" style="background:rgba(32,82,149,.12);color:var(--blu-l)"><span class="bd-dot" style="background:var(--blu-l)"></span>Reservado</span>
             <div class="al-btns">
+              <button class="btn btn-grn btn-xs" onclick="iniciarAluguelDaReserva('${r.id}')"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg>Iniciar Aluguel</button>
               <button class="btn btn-red btn-xs" onclick="cancelarReserva('${r.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>Cancelar</button>
             </div>
           </div>
@@ -93,6 +94,18 @@ async function cancelarReserva(id){
       renderReservas();
     }catch(e){ toast(e.message,"error"); }
   });
+}
+
+/* Valida a reserva, transformando-a em um aluguel ativo real */
+async function iniciarAluguelDaReserva(id){
+  confirmar("Iniciar Aluguel","Confirma o início do aluguel para esta reserva? O reboque será marcado como alugado e a reserva será encerrada.", async ()=>{
+    try{
+      await api.post(`/api/reservas/${id}/iniciar`);
+      toast("Aluguel iniciado com sucesso!","success");
+      renderReservas();
+      if(typeof renderDashboard === "function") renderDashboard();
+    }catch(e){ toast(e.message,"error"); }
+  }, false);
 }
 
 /* Cria uma reserva diretamente a partir do formulário de Novo Aluguel,
