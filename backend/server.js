@@ -248,6 +248,43 @@ app.delete('/api/clientes/:id', auth, (req, res) => {
 // ═══════════════════════════════════════════════════════
 // ALUGUÉIS
 // ═══════════════════════════════════════════════════════
+// ── Verificação de disponibilidade do reboque por período ─
+// Checa se já existe ALUGUEL ativo OU RESERVA ativa do mesmo
+// reboque com datas que se sobrepõem ao período solicitado.
+// excludeAluguelId/excludeReservaId permitem ignorar o próprio
+// registro ao editar (evita falso conflito com ele mesmo).
+function checkConflitoReboque(reboque_id, dataInicio, dataFim, excludeAluguelId, excludeReservaId) {
+  const conflitoAluguel = get(
+    `SELECT a.id, a.saida, a.devolucao, c.nome as cliente_nome
+     FROM alugueis a JOIN clientes c ON c.id=a.cliente_id
+     WHERE a.reboque_id=? AND a.status='ativo'
+       AND a.saida<=? AND a.devolucao>=?
+       ${excludeAluguelId ? 'AND a.id!=?' : ''}`,
+    excludeAluguelId
+      ? [reboque_id, dataFim, dataInicio, excludeAluguelId]
+      : [reboque_id, dataFim, dataInicio]
+  );
+  if (conflitoAluguel) {
+    return `Reboque já alugado de ${conflitoAluguel.saida} até ${conflitoAluguel.devolucao} (cliente: ${conflitoAluguel.cliente_nome})`;
+  }
+
+  const conflitoReserva = get(
+    `SELECT res.id, res.data_inicio, res.data_fim, c.nome as cliente_nome
+     FROM reservas res JOIN clientes c ON c.id=res.cliente_id
+     WHERE res.reboque_id=? AND res.status='ativa'
+       AND res.data_inicio<=? AND res.data_fim>=?
+       ${excludeReservaId ? 'AND res.id!=?' : ''}`,
+    excludeReservaId
+      ? [reboque_id, dataFim, dataInicio, excludeReservaId]
+      : [reboque_id, dataFim, dataInicio]
+  );
+  if (conflitoReserva) {
+    return `Reboque já reservado de ${conflitoReserva.data_inicio} até ${conflitoReserva.data_fim} (cliente: ${conflitoReserva.cliente_nome})`;
+  }
+
+  return null;
+}
+
 const ALUGUEL_SELECT = `
   SELECT a.*,
     c.nome as cliente_nome, c.tel as cliente_tel,
@@ -278,7 +315,9 @@ app.post('/api/alugueis', auth, (req, res) => {
   const r = get(`SELECT nome,status FROM reboques WHERE id=?`,[reboque_id]);
   if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
   if (r.status === 'manutencao') return res.status(409).json({ error: 'Reboque em manutenção' });
-  if (r.status === 'alugado')    return res.status(409).json({ error: 'Reboque já está alugado' });
+
+  const conflito = checkConflitoReboque(reboque_id, saida, devolucao);
+  if (conflito) return res.status(409).json({ error: conflito });
 
   const id      = uid();
   const hs      = hora_saida      || '00:00';
@@ -303,6 +342,14 @@ app.put('/api/alugueis/:id', auth, (req, res) => {
 
   const rbFinal = reboque_id || a.reboque_id;
   const stFinal = status || a.status;
+  const saidaFinal = saida || a.saida;
+  const devolucaoFinal = devolucao || a.devolucao;
+
+  // Só valida conflito se o aluguel continuar/ficar ativo (encerrado não ocupa data)
+  if (stFinal === 'ativo') {
+    const conflito = checkConflitoReboque(rbFinal, saidaFinal, devolucaoFinal, req.params.id, null);
+    if (conflito) return res.status(409).json({ error: conflito });
+  }
 
   // Libera o reboque antigo se trocou de reboque
   if (reboque_id && reboque_id !== a.reboque_id) {
@@ -458,6 +505,9 @@ app.post('/api/reservas', auth, (req, res) => {
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id]);
   if (!c) return res.status(404).json({ error: 'Cliente não encontrado' });
 
+  const conflito = checkConflitoReboque(reboque_id, data_inicio, data_fim);
+  if (conflito) return res.status(409).json({ error: conflito });
+
   const id = uid();
   run(`INSERT INTO reservas (id,reboque_id,cliente_id,data_inicio,data_fim,obs) VALUES (?,?,?,?,?,?)`,
     [id, reboque_id, cliente_id, data_inicio, data_fim, obs||null]);
@@ -472,7 +522,9 @@ app.post('/api/reservas/:id/iniciar', auth, (req, res) => {
   const r = get(`SELECT * FROM reboques WHERE id=?`,[resv.reboque_id]);
   if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
   if (r.status === 'manutencao') return res.status(409).json({ error: 'Reboque em manutenção' });
-  if (r.status === 'alugado')    return res.status(409).json({ error: 'Reboque já está alugado' });
+
+  const conflito = checkConflitoReboque(resv.reboque_id, resv.data_inicio, resv.data_fim, null, req.params.id);
+  if (conflito) return res.status(409).json({ error: conflito });
 
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[resv.cliente_id]);
 
