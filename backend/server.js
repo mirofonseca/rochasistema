@@ -216,11 +216,11 @@ app.get('/api/clientes', auth, (req, res) => {
 });
 
 app.post('/api/clientes', auth, (req, res) => {
-  const { nome, cpf, tel, email, endereco, cidade, cnh, cat_cnh, renavan, placa_veiculo, cep, obs } = req.body;
+  const { nome, cpf, tel, rg, endereco, cidade, cnh, cat_cnh, renavan, placa_veiculo, cep, obs } = req.body;
   if (!nome || !tel) return res.status(400).json({ error: 'Nome e telefone obrigatórios' });
   const id = uid();
-  run(`INSERT INTO clientes (id,nome,cpf,tel,email,endereco,cidade,cnh,cat_cnh,renavan,placa_veiculo,cep,obs) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id,nome,cpf||null,tel,email||null,endereco||null,cidade||null,cnh||null,cat_cnh||null,renavan||null,placa_veiculo||null,cep||null,obs||null]);
+  run(`INSERT INTO clientes (id,nome,cpf,tel,rg,endereco,cidade,cnh,cat_cnh,renavan,placa_veiculo,cep,obs) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id,nome,cpf||null,tel,rg||null,endereco||null,cidade||null,cnh||null,cat_cnh||null,renavan||null,placa_veiculo||null,cep||null,obs||null]);
   auditoria('criar','Cliente',`Novo cliente: ${nome}`,`Tel: ${tel} · CPF: ${cpf||'—'}`, req.user);
   res.status(201).json(get(`SELECT * FROM clientes WHERE id=?`,[id]));
 });
@@ -228,9 +228,9 @@ app.post('/api/clientes', auth, (req, res) => {
 app.put('/api/clientes/:id', auth, (req, res) => {
   const c = get(`SELECT * FROM clientes WHERE id=?`,[req.params.id]);
   if (!c) return res.status(404).json({ error: 'Cliente não encontrado' });
-  const { nome, cpf, tel, email, endereco, cidade, cnh, cat_cnh, renavan, placa_veiculo, cep, obs } = req.body;
-  run(`UPDATE clientes SET nome=?,cpf=?,tel=?,email=?,endereco=?,cidade=?,cnh=?,cat_cnh=?,renavan=?,placa_veiculo=?,cep=?,obs=? WHERE id=?`,
-    [nome||c.nome,cpf||null,tel||c.tel,email||null,endereco||null,cidade||null,cnh||null,cat_cnh||null,renavan||null,placa_veiculo||null,cep||null,obs||null,req.params.id]);
+  const { nome, cpf, tel, rg, endereco, cidade, cnh, cat_cnh, renavan, placa_veiculo, cep, obs } = req.body;
+  run(`UPDATE clientes SET nome=?,cpf=?,tel=?,rg=?,endereco=?,cidade=?,cnh=?,cat_cnh=?,renavan=?,placa_veiculo=?,cep=?,obs=? WHERE id=?`,
+    [nome||c.nome,cpf||null,tel||c.tel,rg||null,endereco||null,cidade||null,cnh||null,cat_cnh||null,renavan||null,placa_veiculo||null,cep||null,obs||null,req.params.id]);
   auditoria('editar','Cliente',`Cliente editado: ${nome||c.nome}`,`Tel: ${tel}`, req.user);
   res.json(get(`SELECT * FROM clientes WHERE id=?`,[req.params.id]));
 });
