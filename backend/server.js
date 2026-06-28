@@ -287,8 +287,10 @@ function checkConflitoReboque(reboque_id, dataInicio, dataFim, excludeAluguelId,
 
 const ALUGUEL_SELECT = `
   SELECT a.*,
-    c.nome as cliente_nome, c.tel as cliente_tel,
-    r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo
+    c.nome as cliente_nome, c.tel as cliente_tel, c.cpf as cliente_cpf,
+    c.endereco as cliente_endereco, c.cidade as cliente_cidade,
+    c.cnh as cliente_cnh, c.cat_cnh as cliente_cat_cnh,
+    r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo, r.capacidade as reboque_capacidade
   FROM alugueis a
   JOIN clientes c ON c.id = a.cliente_id
   JOIN reboques r ON r.id = a.reboque_id
@@ -615,6 +617,19 @@ app.get('/api/config', auth, gerente, (req, res) => {
   const rows = all(`SELECT chave,valor FROM config`);
   const cfg = Object.fromEntries(rows.map(r => [r.chave, r.valor]));
   res.json(cfg);
+});
+
+// Dados básicos da empresa para uso em documentos (contrato, recibos etc.)
+// Acessível a qualquer usuário autenticado, não só gerente.
+app.get('/api/config/empresa', auth, (req, res) => {
+  const rows = all(`SELECT chave,valor FROM config WHERE chave IN ('nome','tel','end','cidade')`);
+  const cfg = Object.fromEntries(rows.map(r => [r.chave, r.valor]));
+  res.json({
+    nome:   cfg.nome   || 'Rocha Reboques',
+    tel:    cfg.tel    || '',
+    end:    cfg.end    || '',
+    cidade: cfg.cidade || 'Pelotas - RS',
+  });
 });
 
 app.put('/api/config', auth, gerente, (req, res) => {
