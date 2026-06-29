@@ -142,8 +142,19 @@ function gerarHtmlContrato(a, empresa){
   </p>
 
   <p class="qualificacao">
-    <strong>LOCATÁRIO:</strong> ${a.cliente_nome}${a.cliente_cpf ? ", portador(a) do CPF nº " + a.cliente_cpf : ""}${a.cliente_cnh ? ", CNH nº " + a.cliente_cnh + (a.cliente_cat_cnh ? " categoria " + a.cliente_cat_cnh : "") : ""}, telefone ${a.cliente_tel || "não informado"}${a.cliente_endereco ? ", residente em " + a.cliente_endereco : ""}${a.cliente_cidade ? ", " + a.cliente_cidade : ""}, doravante denominado simplesmente <strong>LOCATÁRIO</strong>.
+    <strong>LOCATÁRIO:</strong> ${a.cliente_nome}${a.cliente_cpf ? ", portador(a) do CPF nº " + a.cliente_cpf : ""}${a.cliente_rg ? ", RG nº " + a.cliente_rg : ""}${a.cliente_cnh ? ", CNH nº " + a.cliente_cnh + (a.cliente_cat_cnh ? " categoria " + a.cliente_cat_cnh : "") : ""}, telefone ${a.cliente_tel || "não informado"}${a.cliente_endereco ? ", residente em " + a.cliente_endereco : ""}${a.cliente_cidade ? ", " + a.cliente_cidade : ""}${a.cliente_placa_veiculo ? ", proprietário(a) do veículo de placa " + a.cliente_placa_veiculo : ""}${a.cliente_renavan ? " e Renavam nº " + a.cliente_renavan : ""}, doravante denominado simplesmente <strong>LOCATÁRIO</strong>.
   </p>
+
+  <table class="dados">
+    <tr><td class="label">Nome completo</td><td>${a.cliente_nome}</td></tr>
+    <tr><td class="label">CPF</td><td>${a.cliente_cpf || "Não informado"}</td></tr>
+    <tr><td class="label">RG</td><td>${a.cliente_rg || "Não informado"}</td></tr>
+    <tr><td class="label">CNH</td><td>${a.cliente_cnh ? a.cliente_cnh + (a.cliente_cat_cnh ? " — Categoria " + a.cliente_cat_cnh : "") : "Não informado"}</td></tr>
+    <tr><td class="label">Telefone</td><td>${a.cliente_tel || "Não informado"}</td></tr>
+    <tr><td class="label">Endereço</td><td>${a.cliente_endereco ? a.cliente_endereco + (a.cliente_cidade ? " — " + a.cliente_cidade : "") : (a.cliente_cidade || "Não informado")}</td></tr>
+    <tr><td class="label">Veículo (placa)</td><td>${a.cliente_placa_veiculo || "Não informado"}</td></tr>
+    <tr><td class="label">Renavam</td><td>${a.cliente_renavan || "Não informado"}</td></tr>
+  </table>
 
   <p>As partes acima qualificadas têm, entre si, justo e acertado o presente Contrato de Locação de Bem Móvel, que se regerá pelas cláusulas seguintes e pelas disposições do Código Civil Brasileiro aplicáveis à locação de coisas (arts. 565 a 578).</p>
 

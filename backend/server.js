@@ -287,9 +287,10 @@ function checkConflitoReboque(reboque_id, dataInicio, dataFim, excludeAluguelId,
 
 const ALUGUEL_SELECT = `
   SELECT a.*,
-    c.nome as cliente_nome, c.tel as cliente_tel, c.cpf as cliente_cpf,
+    c.nome as cliente_nome, c.tel as cliente_tel, c.cpf as cliente_cpf, c.rg as cliente_rg,
     c.endereco as cliente_endereco, c.cidade as cliente_cidade,
     c.cnh as cliente_cnh, c.cat_cnh as cliente_cat_cnh,
+    c.renavan as cliente_renavan, c.placa_veiculo as cliente_placa_veiculo,
     r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo, r.capacidade as reboque_capacidade
   FROM alugueis a
   JOIN clientes c ON c.id = a.cliente_id
