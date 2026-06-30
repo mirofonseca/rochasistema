@@ -14,7 +14,35 @@ async function editarAluguel(e){try{const t=await api.get(`/api/alugueis/${e}`),
 
 async function verAluguel(e){try{const t=await api.get(`/api/alugueis/${e}`),a=statusReal(t),n=diasEnteTotal(t.saida,t.devolucao);document.getElementById("detalhe-body").innerHTML=`\n      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">\n        <div>\n          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--blu);letter-spacing:1px">${t.cliente_nome||"—"}</div>\n          <div style="font-size:12px;color:var(--muted);margin-top:3px">${t.cliente_tel||""}</div>\n        </div>\n        <div style="display:flex;gap:6px">${badgeSt(a)} ${badgePag(t.pagamento)}</div>\n      </div>\n      <div style="background:var(--bg);padding:14px 16px;margin-bottom:16px;border-left:3px solid var(--org)">\n        <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--blu);text-transform:uppercase">${t.reboque_nome||"—"}</div>\n        <div style="font-size:12px;color:var(--muted);margin-top:2px">${t.reboque_tipo||""}${t.reboque_placa?" · "+t.reboque_placa:""}</div>\n      </div>\n      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">\n        ${[["Saída",fmtDate(t.saida)+(t.hora_saida?" "+t.hora_saida:"")],["Devolução",fmtDate(t.devolucao)+(t.hora_devolucao?" "+t.hora_devolucao:"")],["Período",n+" dia(s)"],["Diária",fmt(t.diaria)],...(t.tipo_pagamento?[["Forma de Pagamento",({pix_maquina:"PIX Máquina",pix_jonatas:"PIX Jonatas",cartao:"Cartão"})[t.tipo_pagamento]||t.tipo_pagamento]]:[])].map(([e,t])=>`\n          <div style="background:var(--bg);padding:12px 14px">\n            <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${e}</div>\n            <div style="font-weight:700;font-size:14px">${t}</div>\n          </div>`).join("")}\n      </div>\n      <div style="background:var(--blu);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">\n        <span style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase">Valor Total</span>\n        <span style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--org);letter-spacing:1px">${fmt(t.total)}</span>\n      </div>\n      ${t.obs?`<div style="background:var(--bg);padding:12px 14px"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Observações</div><div style="font-size:13px">${t.obs}</div></div>`:""}\n    `,document.getElementById("detalhe-ft").innerHTML=`\n      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>\n      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe');editarAluguel('${t.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>\n      ${"encerrado"!==a?`<button class="btn btn-grn" onclick="fecharModal('modal-detalhe');encerrarAluguel('${t.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>`:""}\n      <button class="btn btn-primary" onclick="imprimirContrato('${t.id}')"><svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Contrato</button>\n    `,abrirModal("modal-detalhe")}catch(e){toast(e.message,"error")}}
 
-async function encerrarAluguel(e){const t=_alCache.find(t=>t.id===e)||await api.get(`/api/alugueis/${e}`).catch(()=>null);t&&"pago"!==t.pagamento?toast('Pagamento pendente! Marque o aluguel como "Pago" antes de encerrar.',"error"):confirmar("Encerrar Aluguel","Confirma o encerramento? O reboque será liberado.",async()=>{try{await api.post(`/api/alugueis/${e}/encerrar`),toast("Aluguel encerrado. Reboque liberado.","success"),await renderAlugueis(),renderDashboard(),renderReboques()}catch(e){toast(e.message,"error")}},!1)}
+async function encerrarAluguel(id){
+  const a = _alCache.find(x=>x.id===id) || await api.get(`/api/alugueis/${id}`).catch(()=>null);
+  if(!a) return;
+  if(a.pagamento !== "pago"){
+    toast('Pagamento pendente! Marque o aluguel como "Pago" antes de encerrar.',"error");
+    return;
+  }
+  document.getElementById("ve-aluguel-id").value = id;
+  document.getElementById("ve-valor-extra").value = "0";
+  document.getElementById("ve-resumo").innerHTML =
+    `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Cliente</span><strong>${a.cliente_nome}</strong></div>`+
+    `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Reboque</span><strong>${a.reboque_nome}</strong></div>`+
+    `<div style="display:flex;justify-content:space-between"><span>Total do aluguel</span><strong>${fmt(a.total)}</strong></div>`;
+  abrirModal("modal-valor-extra");
+}
+
+async function confirmarEncerrarComExtra(){
+  const id = document.getElementById("ve-aluguel-id").value;
+  const valorExtra = Number(document.getElementById("ve-valor-extra").value) || 0;
+  if(valorExtra < 0){ toast("Valor extra não pode ser negativo","error"); return; }
+  try{
+    await api.post(`/api/alugueis/${id}/encerrar`, { valor_extra: valorExtra });
+    toast(valorExtra > 0 ? `Aluguel encerrado com valor extra de ${fmt(valorExtra)}!` : "Aluguel encerrado. Reboque liberado.","success");
+    fecharModal("modal-valor-extra");
+    await renderAlugueis();
+    renderDashboard();
+    renderReboques();
+  }catch(e){ toast(e.message,"error"); }
+}
 
 async function excluirAluguel(e){confirmar("Excluir Aluguel","Esta ação não pode ser desfeita. Deseja excluir este aluguel?",async()=>{try{await api.del(`/api/alugueis/${e}`),toast("Aluguel excluído.","info"),await renderAlugueis(),renderDashboard()}catch(e){toast(e.message,"error")}})}
 

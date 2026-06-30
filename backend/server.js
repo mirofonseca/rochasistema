@@ -380,12 +380,17 @@ app.post('/api/alugueis/:id/encerrar', auth, (req, res) => {
   if (a.status === 'encerrado') return res.status(400).json({ error: 'Aluguel já encerrado' });
   if (a.pagamento !== 'pago') return res.status(400).json({ error: 'Aluguel deve estar com pagamento "Pago" para encerrar' });
 
-  run(`UPDATE alugueis SET status='encerrado' WHERE id=?`,[req.params.id]);
+  const valorExtra = Number(req.body?.valor_extra) || 0;
+  if (valorExtra < 0) return res.status(400).json({ error: 'Valor extra não pode ser negativo' });
+  const novoTotal = Number(a.total) + valorExtra;
+
+  run(`UPDATE alugueis SET status='encerrado', valor_extra=?, total=? WHERE id=?`,[valorExtra, novoTotal, req.params.id]);
   run(`UPDATE reboques SET status='disponivel' WHERE id=?`,[a.reboque_id]);
 
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[a.cliente_id]);
   const r = get(`SELECT nome FROM reboques WHERE id=?`,[a.reboque_id]);
-  auditoria('encerrar','Aluguel',`Aluguel encerrado — ${c?.nome}`,`Reboque ${r?.nome} liberado`, req.user);
+  auditoria('encerrar','Aluguel',`Aluguel encerrado — ${c?.nome}`,
+    `Reboque ${r?.nome} liberado${valorExtra>0?` · Valor extra: ${valorExtra} · Novo total: ${novoTotal}`:''}`, req.user);
   res.json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[req.params.id]));
 });
 

@@ -144,6 +144,7 @@ function createSchema() {
                      CHECK(status IN ('ativo','reservado','encerrado')),
       tipo_pagamento TEXT
                      CHECK(tipo_pagamento IS NULL OR tipo_pagamento IN ('pix_maquina','pix_jonatas','cartao')),
+      valor_extra    REAL NOT NULL DEFAULT 0,
       obs            TEXT,
       criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
     );`);
@@ -214,6 +215,7 @@ function createSchema() {
     `ALTER TABLE alugueis ADD COLUMN hora_saida TEXT DEFAULT '00:00'`,
     `ALTER TABLE alugueis ADD COLUMN hora_devolucao TEXT DEFAULT '00:00'`,
     `ALTER TABLE alugueis ADD COLUMN tipo_pagamento TEXT`,
+    `ALTER TABLE alugueis ADD COLUMN valor_extra REAL DEFAULT 0`,
   ].forEach(sql => { try { db.run(sql); } catch(e) {} });
 
   // Migração: permite status 'reservado' em bancos criados antes desta versão
@@ -245,6 +247,7 @@ function migrarStatusReservado() {
         status         TEXT NOT NULL DEFAULT 'ativo'
                        CHECK(status IN ('ativo','reservado','encerrado')),
         tipo_pagamento TEXT,
+        valor_extra    REAL NOT NULL DEFAULT 0,
         obs            TEXT,
         criado_em      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
       );
