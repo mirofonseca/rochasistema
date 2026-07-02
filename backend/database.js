@@ -179,6 +179,17 @@ function createSchema() {
   db.run(`CREATE INDEX IF NOT EXISTS idx_res_status  ON reservas(status);`);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS documentos (
+      id          TEXT PRIMARY KEY,
+      reboque_id  TEXT NOT NULL REFERENCES reboques(id),
+      nome        TEXT NOT NULL,
+      arquivo     TEXT NOT NULL,
+      tamanho     INTEGER NOT NULL DEFAULT 0,
+      criado_em   TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+    );`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_docs_reboque ON documentos(reboque_id);`);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS auditoria (
       id            TEXT PRIMARY KEY,
       tipo          TEXT NOT NULL,

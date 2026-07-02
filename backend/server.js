@@ -4,10 +4,39 @@ const cors    = require('cors');
 const crypto  = require('crypto');
 const path    = require('path');
 const fs      = require('fs');
+const multer  = require('multer');
 const { initDB, all, get, run, uid, persistDB } = require('./database');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// ── Configuração do diretório de documentos ────────────
+// Usa o mesmo DATA_DIR do banco para garantir persistência no Railway
+const DATA_DIR = process.env.DATA_DIR
+  || process.env.RAILWAY_VOLUME_MOUNT_PATH
+  || (fs.existsSync('/data') ? '/data' : null)
+  || path.join(__dirname, '..', 'data');
+const DOCS_DIR = path.join(DATA_DIR, 'docs');
+if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
+
+// ── Multer: upload de PDFs ──────────────────────────────
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, DOCS_DIR),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase();
+    const nome = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7) + ext;
+    cb(null, nome);
+  },
+});
+const upload = multer({
+  storage,
+  limits:    { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf' || path.extname(file.originalname).toLowerCase() === '.pdf')
+      return cb(null, true);
+    cb(new Error('Apenas arquivos PDF são aceitos'));
+  },
+});
 
 // ── View engine (EJS) ──────────────────────────────────
 app.set('view engine', 'ejs');
@@ -20,6 +49,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // ── Serve static files (CSS, JS, imagens) ──────────────
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
+app.use('/docs',   express.static(DOCS_DIR, { index: false })); // serve PDFs guardados
 app.use(express.static(path.join(__dirname, '..'), { index: false }));
 
 // ── Página principal — renderizada via EJS partials ────
@@ -555,6 +585,36 @@ app.delete('/api/reservas/:id', auth, (req, res) => {
   if (!r) return res.status(404).json({ error: 'Reserva não encontrada' });
   run(`UPDATE reservas SET status='cancelada' WHERE id=?`,[req.params.id]);
   auditoria('excluir','Reserva',`Reserva cancelada — ${r.cliente_nome}`,`Reboque: ${r.reboque_nome}`, req.user);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════
+// DOCUMENTOS (PDFs por reboque)
+// ═══════════════════════════════════════════════════════
+app.get('/api/reboques/:id/docs', auth, (req, res) => {
+  const docs = all(`SELECT * FROM documentos WHERE reboque_id=? ORDER BY criado_em DESC`,[req.params.id]);
+  res.json(docs);
+});
+
+app.post('/api/reboques/:id/docs', auth, upload.single('arquivo'), (req, res) => {
+  const r = get(`SELECT nome FROM reboques WHERE id=?`,[req.params.id]);
+  if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
+  if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+
+  const nome = req.body.nome?.trim() || req.file.originalname;
+  const id   = uid();
+  run(`INSERT INTO documentos (id,reboque_id,nome,arquivo,tamanho) VALUES (?,?,?,?,?)`,
+    [id, req.params.id, nome, req.file.filename, req.file.size]);
+  auditoria('criar','Documento',`PDF anexado ao reboque ${r.nome}`,`Arquivo: ${nome}`, req.user);
+  res.status(201).json(get(`SELECT * FROM documentos WHERE id=?`,[id]));
+});
+
+app.delete('/api/docs/:id', auth, (req, res) => {
+  const doc = get(`SELECT * FROM documentos WHERE id=?`,[req.params.id]);
+  if (!doc) return res.status(404).json({ error: 'Documento não encontrado' });
+  try { fs.unlinkSync(path.join(DOCS_DIR, doc.arquivo)); } catch(e) { /* arquivo já removido */ }
+  run(`DELETE FROM documentos WHERE id=?`,[req.params.id]);
+  auditoria('excluir','Documento',`PDF removido`,`Arquivo: ${doc.nome}`, req.user);
   res.json({ ok: true });
 });
 
