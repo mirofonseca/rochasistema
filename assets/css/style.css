@@ -10,3 +10,20 @@
 .doc-nome:hover{color:var(--org)}
 .doc-nome svg{stroke:var(--red);fill:none;stroke-width:1.75;flex-shrink:0}
 .doc-tam{font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── Relatórios — Gráfico de Barras ────────────────────── */
+.chart-wrap{width:100%;overflow-x:auto;padding-bottom:4px}
+.chart-svg{display:block}
+.chart-bar{transition:opacity .15s}
+.chart-bar:hover{opacity:.75;cursor:default}
+.chart-label{font-family:Barlow,sans-serif;font-size:10px;fill:var(--muted)}
+.chart-val{font-family:Barlow,sans-serif;font-size:9px;font-weight:700;fill:var(--txt)}
+.chart-grid{stroke:var(--brd);stroke-dasharray:4 4}
+.chart-tick{font-family:Barlow,sans-serif;font-size:9px;fill:var(--muted);text-anchor:end}
+.rel-filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.rel-filtros select,.rel-filtros input{padding:7px 10px;border:1px solid var(--brd);background:var(--bg);color:var(--txt);font-size:12px;border-radius:3px;font-family:Barlow,sans-serif}
+.rel-card-grp{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:700px){.rel-card-grp{grid-template-columns:1fr}}
+.rel-legenda{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.rel-leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.rel-leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}

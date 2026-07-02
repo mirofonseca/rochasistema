@@ -1,1 +1,49 @@
-<div class="page" id="page-relatorios"><div class="ph"><div class="ph-left"><div class="ph-tag">Análises</div><div class="ph-title">Relatórios</div><div class="ph-sub">Desempenho financeiro e operacional</div></div><div class="ph-actions"><button class="btn btn-ghost" onclick="exportarDados()"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar JSON</button></div></div><div class="stats-grid" id="rel-stats"></div><div class="two-col"><div><div class="card"><div class="card-hd"><div class="card-title">Receita por Reboque</div></div><div class="card-body" id="rel-por-reboque"></div></div></div><div><div class="card"><div class="card-hd"><div class="card-title">Top Clientes</div></div><div class="card-body np" id="rel-top-cli"></div></div><div class="card"><div class="card-hd"><div class="card-title">Resumo de Pagamentos</div></div><div class="card-body" id="rel-pagamentos"></div></div></div></div></div>
+<div class="page" id="page-relatorios">
+  <div class="ph">
+    <div class="ph-left">
+      <div class="ph-tag">Análises</div>
+      <div class="ph-title">Relatórios</div>
+      <div class="ph-sub">Desempenho financeiro e operacional</div>
+    </div>
+    <div class="ph-actions">
+      <button class="btn btn-ghost" onclick="exportarDados()">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar JSON
+      </button>
+    </div>
+  </div>
+  <div class="rel-filtros">
+    <label style="font-size:12px;font-weight:600;color:var(--muted)">ANO</label>
+    <select id="rel-ano" onchange="renderRelatorios()"></select>
+  </div>
+  <div class="stats-grid" id="rel-stats"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-hd">
+      <div class="card-title">Receita Mensal</div>
+      <div style="font-size:11px;color:var(--muted)" id="rel-chart-subtitle"></div>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap" id="rel-chart-mensal"></div>
+      <div class="rel-legenda">
+        <div class="rel-leg-item"><div class="rel-leg-dot" style="background:var(--org)"></div>Receita Base</div>
+        <div class="rel-leg-item"><div class="rel-leg-dot" style="background:var(--amb)"></div>Valor Extra</div>
+      </div>
+    </div>
+  </div>
+  <div class="rel-card-grp">
+    <div class="card">
+      <div class="card-hd"><div class="card-title">Receita por Reboque</div></div>
+      <div class="card-body" id="rel-por-reboque"></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-hd"><div class="card-title">Top Clientes</div></div>
+        <div class="card-body np" id="rel-top-cli"></div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><div class="card-title">Resumo de Pagamentos</div></div>
+        <div class="card-body" id="rel-pagamentos"></div>
+      </div>
+    </div>
+  </div>
+</div>

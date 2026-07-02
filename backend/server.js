@@ -676,6 +676,38 @@ app.get('/api/relatorios/top-clientes', auth, gerente, (req, res) => {
   `));
 });
 
+app.get('/api/relatorios/receita-mensal', auth, gerente, (req, res) => {
+  // Retorna os últimos 12 meses com receita (pagamento=pago) e quantidade de aluguéis
+  const meses = all(`
+    SELECT
+      strftime('%Y-%m', criado_em) as mes,
+      COALESCE(SUM(total), 0)      as receita,
+      COUNT(id)                    as total_alugueis,
+      COALESCE(SUM(valor_extra),0) as total_extra
+    FROM alugueis
+    WHERE pagamento='pago'
+      AND criado_em >= date('now','-12 months')
+    GROUP BY mes
+    ORDER BY mes ASC
+  `);
+  // Garante que todos os 12 meses apareçam (com 0 se não houver dados)
+  const result = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    const key = d.toISOString().slice(0,7);
+    const found = meses.find(m => m.mes === key);
+    result.push({
+      mes:             key,
+      receita:         Number(found?.receita)         || 0,
+      total_alugueis:  Number(found?.total_alugueis)  || 0,
+      total_extra:     Number(found?.total_extra)      || 0,
+    });
+  }
+  res.json(result);
+});
+
 // ═══════════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════════
