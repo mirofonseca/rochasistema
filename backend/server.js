@@ -655,57 +655,83 @@ app.get('/api/relatorios/dashboard', auth, (req, res) => {
 });
 
 app.get('/api/relatorios/receita-reboque', auth, gerente, (req, res) => {
+  const { inicio, fim } = req.query;
+  let where = `WHERE a.pagamento='pago'`;
+  const p = [];
+  if (inicio) { where += ` AND date(a.saida) >= ?`; p.push(inicio); }
+  if (fim)    { where += ` AND date(a.saida) <= ?`; p.push(fim);    }
   res.json(all(`
-    SELECT r.id, r.nome, r.tipo,
+    SELECT r.id, r.nome as reboque_nome, r.tipo,
       COUNT(a.id) as total_alugueis,
-      COALESCE(SUM(a.total),0) as receita
+      COALESCE(SUM(a.total),0) as receita_total
     FROM reboques r
-    LEFT JOIN alugueis a ON a.reboque_id=r.id
-    GROUP BY r.id ORDER BY receita DESC
-  `));
+    LEFT JOIN alugueis a ON a.reboque_id=r.id ${where.replace('WHERE','AND')}
+    GROUP BY r.id ORDER BY receita_total DESC
+  `, p));
 });
 
 app.get('/api/relatorios/top-clientes', auth, gerente, (req, res) => {
+  const { inicio, fim } = req.query;
+  let where = `WHERE a.pagamento='pago'`;
+  const p = [];
+  if (inicio) { where += ` AND date(a.saida) >= ?`; p.push(inicio); }
+  if (fim)    { where += ` AND date(a.saida) <= ?`; p.push(fim);    }
   res.json(all(`
     SELECT c.id, c.nome, c.tel,
       COUNT(a.id) as total_alugueis,
       COALESCE(SUM(a.total),0) as total_gasto
     FROM clientes c
-    LEFT JOIN alugueis a ON a.cliente_id=c.id
+    LEFT JOIN alugueis a ON a.cliente_id=c.id ${where.replace('WHERE','AND')}
     GROUP BY c.id ORDER BY total_gasto DESC LIMIT 10
-  `));
+  `, p));
 });
 
+
 app.get('/api/relatorios/receita-mensal', auth, gerente, (req, res) => {
-  // Retorna os últimos 12 meses com receita (pagamento=pago) e quantidade de aluguéis
+  const dataInicio = req.query.inicio || '';
+  const dataFim    = req.query.fim    || '';
+
+  let where = `WHERE pagamento='pago'`;
+  const params = [];
+  if (dataInicio) { where += ` AND date(saida) >= ?`; params.push(dataInicio); }
+  if (dataFim)    { where += ` AND date(saida) <= ?`; params.push(dataFim);    }
+
   const meses = all(`
     SELECT
-      strftime('%Y-%m', criado_em) as mes,
-      COALESCE(SUM(total), 0)      as receita,
-      COUNT(id)                    as total_alugueis,
-      COALESCE(SUM(valor_extra),0) as total_extra
+      strftime('%Y-%m', saida) as mes,
+      COALESCE(SUM(total), 0)                      as receita,
+      COUNT(id)                                     as total_alugueis,
+      COALESCE(SUM(COALESCE(valor_extra,0)),0)      as total_extra
     FROM alugueis
-    WHERE pagamento='pago'
-      AND criado_em >= date('now','-12 months')
+    ${where}
     GROUP BY mes
     ORDER BY mes ASC
-  `);
-  // Garante que todos os 12 meses apareçam (com 0 se não houver dados)
-  const result = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - i);
-    const key = d.toISOString().slice(0,7);
-    const found = meses.find(m => m.mes === key);
-    result.push({
-      mes:             key,
-      receita:         Number(found?.receita)         || 0,
-      total_alugueis:  Number(found?.total_alugueis)  || 0,
-      total_extra:     Number(found?.total_extra)      || 0,
-    });
+  `, params);
+
+  if (!dataInicio && !dataFim) {
+    const result = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      const key   = d.toISOString().slice(0,7);
+      const found = meses.find(m => m.mes === key);
+      result.push({
+        mes:            key,
+        receita:        Number(found?.receita)        || 0,
+        total_alugueis: Number(found?.total_alugueis) || 0,
+        total_extra:    Number(found?.total_extra)     || 0,
+      });
+    }
+    return res.json(result);
   }
-  res.json(result);
+
+  res.json(meses.map(m => ({
+    mes:            m.mes,
+    receita:        Number(m.receita)        || 0,
+    total_alugueis: Number(m.total_alugueis) || 0,
+    total_extra:    Number(m.total_extra)    || 0,
+  })));
 });
 
 // ═══════════════════════════════════════════════════════

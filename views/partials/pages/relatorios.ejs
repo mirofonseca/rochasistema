@@ -5,21 +5,34 @@
       <div class="ph-title">Relatórios</div>
       <div class="ph-sub">Desempenho financeiro e operacional</div>
     </div>
-    <div class="ph-actions">
-      <button class="btn btn-ghost" onclick="exportarDados()">
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Exportar JSON
+  </div>
+
+  <!-- Filtro por período -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-body" style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+      <div class="fg">
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Data Início</label>
+        <input class="inp" type="date" id="rel-inicio" style="padding:8px 10px">
+      </div>
+      <div class="fg">
+        <label style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px">Data Fim</label>
+        <input class="inp" type="date" id="rel-fim" style="padding:8px 10px">
+      </div>
+      <button class="btn btn-primary" onclick="filtrarRelatorio()">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Filtrar
       </button>
+      <button class="btn btn-ghost" onclick="limparFiltroRelatorio()">Últimos 12 meses</button>
     </div>
   </div>
-  <div class="rel-filtros">
-    <label style="font-size:12px;font-weight:600;color:var(--muted)">ANO</label>
-    <select id="rel-ano" onchange="renderRelatorios()"></select>
-  </div>
+
+  <!-- Cards de resumo -->
   <div class="stats-grid" id="rel-stats"></div>
+
+  <!-- Gráfico de receita mensal -->
   <div class="card" style="margin-bottom:16px">
     <div class="card-hd">
-      <div class="card-title">Receita Mensal</div>
+      <div class="card-title">Receita por Mês</div>
       <div style="font-size:11px;color:var(--muted)" id="rel-chart-subtitle"></div>
     </div>
     <div class="card-body">
@@ -30,6 +43,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Receita por Reboque e Top Clientes -->
   <div class="rel-card-grp">
     <div class="card">
       <div class="card-hd"><div class="card-title">Receita por Reboque</div></div>
