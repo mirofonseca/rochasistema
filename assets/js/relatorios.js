@@ -1,6 +1,20 @@
 /* ═══ RELATÓRIOS — Receita mensal + gráficos ═══ */
 
 const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const DIAS_PT  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+let _chartView = 'mensal'; // 'mensal' | 'diario'
+
+function setChartView(view){
+  _chartView = view;
+  document.getElementById('btn-view-mensal').className = view==='mensal'
+    ? 'btn btn-primary btn-xs' : 'btn btn-ghost btn-xs';
+  document.getElementById('btn-view-diario').className = view==='diario'
+    ? 'btn btn-primary btn-xs' : 'btn btn-ghost btn-xs';
+  document.getElementById('rel-chart-title').textContent =
+    view==='mensal' ? 'Receita por Mês' : 'Receita por Dia';
+  _renderChart();
+}
 
 /* Inicializa datas padrão ao abrir a página */
 function _initFiltros(){
@@ -22,7 +36,7 @@ function limparFiltroRelatorio(){
 }
 
 /* Gera gráfico de barras SVG puro */
-function _gerarGraficoSVG(dados){
+function _gerarGraficoSVG(dados, tipo){
   if(!dados.length) return '<div style="color:var(--muted);text-align:center;padding:40px 0;font-size:13px">Nenhum dado no período</div>';
   const W = 760, H = 230, PL = 58, PR = 16, PT = 22, PB = 50;
   const gW = W - PL - PR, gH = H - PT - PB;
@@ -62,7 +76,7 @@ function _gerarGraficoSVG(dados){
     if(hBase > 0){
       const y = PT + gH - hTot;
       svg += `<rect class="chart-bar" x="${x}" y="${y}" width="${bW}" height="${hBase}" fill="var(--org)" rx="2"
-        title="${d.mes}: R$ ${base.toFixed(0)}"/>`;
+        title="${d.mes||d.dia}: R$ ${base.toFixed(0)}"/>`;
     }
     // Barra extra (âmbar) empilhada acima
     if(hExtra > 0){
@@ -77,15 +91,40 @@ function _gerarGraficoSVG(dados){
       svg += `<text class="chart-val" x="${x+bW/2}" y="${yLabel}" text-anchor="middle">${label}</text>`;
     }
     // Labels do mês (e ano se filtro customizado)
-    const partes = d.mes.split('-');
-    const mesStr = MESES_PT[parseInt(partes[1])-1];
-    svg += `<text class="chart-label" x="${x+bW/2}" y="${PT+gH+16}" text-anchor="middle">${mesStr}</text>`;
-    if(n <= 14)
-      svg += `<text class="chart-label" x="${x+bW/2}" y="${PT+gH+28}" text-anchor="middle" style="font-size:8px">${partes[0]}</text>`;
+    const chave = d.mes || d.dia;
+    let linha1, linha2 = '';
+    if(tipo === 'diario'){
+      const dt = new Date(chave + 'T12:00:00');
+      linha1 = String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0');
+      linha2 = DIAS_PT[dt.getDay()];
+    } else {
+      const partes = chave.split('-');
+      linha1 = MESES_PT[parseInt(partes[1])-1];
+      linha2 = partes[0];
+    }
+    svg += `<text class="chart-label" x="${x+bW/2}" y="${PT+gH+16}" text-anchor="middle">${linha1}</text>`;
+    if(n <= 62)
+      svg += `<text class="chart-label" x="${x+bW/2}" y="${PT+gH+28}" text-anchor="middle" style="font-size:8px">${linha2}</text>`;
   });
 
   svg += '</svg>';
   return svg;
+}
+
+async function _renderChart(){
+  const tipo = _chartView;
+  const qs   = window._qs || '';
+  let dados;
+
+  if(tipo === 'mensal'){
+    dados = window._dadosMensal || [];
+  } else {
+    try{
+      dados = await api.get('/api/relatorios/receita-diaria' + qs);
+    }catch(e){ toast(e.message,'error'); return; }
+  }
+
+  document.getElementById('rel-chart-mensal').innerHTML = _gerarGraficoSVG(dados, tipo);
 }
 
 async function renderRelatorios(){
@@ -152,8 +191,9 @@ async function renderRelatorios(){
     `;
 
     // ── Gráfico de barras ─────────────────────────────────────
-    const dadosComDados = mensal.filter(m => (Number(m.receita)||0) > 0);
-    document.getElementById('rel-chart-mensal').innerHTML = _gerarGraficoSVG(mensal.length ? mensal : dadosComDados);
+    window._dadosMensal = mensal;
+    window._qs          = qs;
+    await _renderChart();
 
     // ── Receita por Reboque ───────────────────────────────────
     const rbComDados = porReboque.filter(r => (Number(r.receita_total)||0) > 0);

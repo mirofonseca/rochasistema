@@ -32,8 +32,14 @@
   <!-- Gráfico de receita mensal -->
   <div class="card" style="margin-bottom:16px">
     <div class="card-hd">
-      <div class="card-title">Receita por Mês</div>
-      <div style="font-size:11px;color:var(--muted)" id="rel-chart-subtitle"></div>
+      <div class="card-title" id="rel-chart-title">Receita por Mês</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:11px;color:var(--muted)" id="rel-chart-subtitle"></div>
+        <div style="display:flex;gap:4px;margin-left:8px">
+          <button id="btn-view-mensal" class="btn btn-primary btn-xs" onclick="setChartView('mensal')">Mensal</button>
+          <button id="btn-view-diario" class="btn btn-ghost btn-xs" onclick="setChartView('diario')">Diário</button>
+        </div>
+      </div>
     </div>
     <div class="card-body">
       <div class="chart-wrap" id="rel-chart-mensal"></div>

@@ -734,6 +734,45 @@ app.get('/api/relatorios/receita-mensal', auth, gerente, (req, res) => {
   })));
 });
 
+app.get('/api/relatorios/receita-diaria', auth, gerente, (req, res) => {
+  const dataInicio = req.query.inicio || '';
+  const dataFim    = req.query.fim    || '';
+
+  // Default: últimos 30 dias se não houver filtro
+  const ini = dataInicio || (() => {
+    const d = new Date(); d.setDate(d.getDate() - 29); return d.toISOString().slice(0,10);
+  })();
+  const fim = dataFim || new Date().toISOString().slice(0,10);
+
+  const dias = all(`
+    SELECT
+      date(saida) as dia,
+      COALESCE(SUM(total), 0)                 as receita,
+      COUNT(id)                               as total_alugueis,
+      COALESCE(SUM(COALESCE(valor_extra,0)),0) as total_extra
+    FROM alugueis
+    WHERE pagamento='pago'
+      AND date(saida) >= ? AND date(saida) <= ?
+    GROUP BY dia
+    ORDER BY dia ASC
+  `, [ini, fim]);
+
+  // Garante série contínua dia a dia
+  const result = [];
+  const start = new Date(ini); const end = new Date(fim);
+  for(let d = new Date(start); d <= end; d.setDate(d.getDate()+1)){
+    const key   = d.toISOString().slice(0,10);
+    const found = dias.find(x => x.dia === key);
+    result.push({
+      dia:            key,
+      receita:        Number(found?.receita)        || 0,
+      total_alugueis: Number(found?.total_alugueis) || 0,
+      total_extra:    Number(found?.total_extra)    || 0,
+    });
+  }
+  res.json(result);
+});
+
 // ═══════════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════════
