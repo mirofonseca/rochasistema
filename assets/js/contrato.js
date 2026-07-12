@@ -138,23 +138,12 @@ function gerarHtmlContrato(a, empresa){
   <div class="subtitulo">Reboque / Trailer — Locação por Prazo Determinado</div>
 
   <p class="qualificacao">
-    <strong>LOCADOR:</strong> ${empresa.nome}, ${empresa.end ? "com endereço em " + empresa.end + ", " : ""}${empresa.cidade}${empresa.tel ? ", telefone " + empresa.tel : ""}, doravante denominado simplesmente <strong>LOCADOR</strong>.
+    <strong>LOCADOR:</strong> Rocha Reboques, CNPJ nº 60.117.050/0001-85, com endereço na Rua Bernardo José de Souza, 244, Bairro Fragata, Pelotas/RS, CEP 96040-230, neste ato representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, telefone (53) 9 9962-7279, doravante denominado simplesmente <strong>LOCADOR</strong>.
   </p>
 
   <p class="qualificacao">
     <strong>LOCATÁRIO:</strong> ${a.cliente_nome}${a.cliente_cpf ? ", portador(a) do CPF nº " + a.cliente_cpf : ""}${a.cliente_rg ? ", RG nº " + a.cliente_rg : ""}${a.cliente_cnh ? ", CNH nº " + a.cliente_cnh + (a.cliente_cat_cnh ? " categoria " + a.cliente_cat_cnh : "") : ""}, telefone ${a.cliente_tel || "não informado"}${a.cliente_endereco ? ", residente em " + a.cliente_endereco : ""}${a.cliente_cidade ? ", " + a.cliente_cidade : ""}${a.cliente_placa_veiculo ? ", proprietário(a) do veículo de placa " + a.cliente_placa_veiculo : ""}${a.cliente_renavan ? " e Renavam nº " + a.cliente_renavan : ""}, doravante denominado simplesmente <strong>LOCATÁRIO</strong>.
   </p>
-
-  <table class="dados">
-    <tr><td class="label">Nome completo</td><td>${a.cliente_nome}</td></tr>
-    <tr><td class="label">CPF</td><td>${a.cliente_cpf || "Não informado"}</td></tr>
-    <tr><td class="label">RG</td><td>${a.cliente_rg || "Não informado"}</td></tr>
-    <tr><td class="label">CNH</td><td>${a.cliente_cnh ? a.cliente_cnh + (a.cliente_cat_cnh ? " — Categoria " + a.cliente_cat_cnh : "") : "Não informado"}</td></tr>
-    <tr><td class="label">Telefone</td><td>${a.cliente_tel || "Não informado"}</td></tr>
-    <tr><td class="label">Endereço</td><td>${a.cliente_endereco ? a.cliente_endereco + (a.cliente_cidade ? " — " + a.cliente_cidade : "") : (a.cliente_cidade || "Não informado")}</td></tr>
-    <tr><td class="label">Veículo (placa)</td><td>${a.cliente_placa_veiculo || "Não informado"}</td></tr>
-    <tr><td class="label">Renavam</td><td>${a.cliente_renavan || "Não informado"}</td></tr>
-  </table>
 
   <p>As partes acima qualificadas têm, entre si, justo e acertado o presente Contrato de Locação de Bem Móvel, que se regerá pelas cláusulas seguintes e pelas disposições do Código Civil Brasileiro aplicáveis à locação de coisas (arts. 565 a 578).</p>
 
@@ -167,6 +156,7 @@ function gerarHtmlContrato(a, empresa){
     <tr><td class="label">Capacidade</td><td>${a.reboque_capacidade ? a.reboque_capacidade + " kg" : "Não informado"}</td></tr>
   </table>
   <p>O LOCATÁRIO declara, neste ato, ter vistoriado o bem e recebê-lo em perfeitas condições de uso e funcionamento, comprometendo-se a devolvê-lo no mesmo estado, salvo o desgaste natural decorrente do uso regular.</p>
+  <p>O REBOQUE, objeto deste contrato, será utilizado exclusivamente pelo LOCATÁRIO, sendo o condutor da mesma, não sendo permitido o seu uso por terceiros.</p>
 
   <div class="clausula-titulo">Cláusula 2ª — Do Prazo de Locação</div>
   <table class="dados">
@@ -200,17 +190,20 @@ function gerarHtmlContrato(a, empresa){
   <div class="clausula-titulo">Cláusula 8ª — Da Rescisão</div>
   <p>O presente contrato poderá ser rescindido antecipadamente por qualquer das partes, mediante comunicação prévia, hipótese em que será devida a parte proporcional do valor já utilizado, sem prejuízo de eventuais penalidades aplicáveis em caso de descumprimento contratual.</p>
 
-  <div class="clausula-titulo">Cláusula 9ª — Do Foro</div>
-  <p>As partes eleger o foro da comarca de ${empresa.cidade || "Pelotas/RS"} para dirimir quaisquer dúvidas ou litígios decorrentes do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
+  <div class="clausula-titulo">Cláusula 9ª — Da Identificação do Locador</div>
+  <p>O LOCADOR é a empresa Rocha Reboques, inscrita no CNPJ sob o nº 60.117.050/0001-85, com sede na Rua Bernardo José de Souza, nº 244, Bairro Fragata, na cidade de Pelotas, Estado do Rio Grande do Sul, CEP 96040-230, podendo o LOCADOR, neste ato e para todos os fins, ser representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, contato telefônico (53) 9 9962-7279.</p>
+
+  <div class="clausula-titulo">Cláusula 10ª — Do Foro</div>
+  <p>As partes eleger o foro da comarca de Pelotas/RS para dirimir quaisquer dúvidas ou litígios decorrentes do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
 
   <p>E por estarem assim justas e contratadas, as partes firmam o presente instrumento, em duas vias de igual teor e forma.</p>
 
-  <div class="local-data">${empresa.cidade || "Pelotas/RS"}, ${fmtDataExtensa(a.saida)}.</div>
+  <div class="local-data">Pelotas/RS, ${fmtDataExtensa(a.saida)}.</div>
 
   <div class="assinaturas">
     <div class="assinatura-bloco">
       <div class="linha-assinatura">
-        ${empresa.nome}<br>LOCADOR
+        Rocha Reboques<br>Bruna Horner Floor de Oliveira — LOCADOR
       </div>
     </div>
     <div class="assinatura-bloco">
