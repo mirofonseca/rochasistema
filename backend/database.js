@@ -143,7 +143,7 @@ function createSchema() {
       status         TEXT NOT NULL DEFAULT 'ativo'
                      CHECK(status IN ('ativo','reservado','encerrado')),
       tipo_pagamento TEXT
-                     CHECK(tipo_pagamento IS NULL OR tipo_pagamento IN ('pix_maquina','pix_jonatas','cartao')),
+                     CHECK(tipo_pagamento IS NULL OR tipo_pagamento IN ('pix_maquina','pix_jonatas','cartao','dinheiro')),
       valor_extra    REAL NOT NULL DEFAULT 0,
       desconto       REAL NOT NULL DEFAULT 0,
       obs            TEXT,

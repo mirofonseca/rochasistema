@@ -21,7 +21,7 @@ function gerarHtmlContrato(a, empresa){
   const hojeFmt = hoje.toLocaleDateString("pt-BR");
 
   const pagamentoLabel = { pendente:"Pendente", parcial:"Parcial", pago:"Pago" }[a.pagamento] || a.pagamento;
-  const tipoPgtoLabel  = { pix_maquina:"PIX Máquina", pix_jonatas:"PIX Jonatas", cartao:"Cartão" }[a.tipo_pagamento] || "Não informado";
+  const tipoPgtoLabel  = { pix_maquina:"PIX Máquina", pix_jonatas:"PIX Jonatas", cartao:"Cartão", dinheiro:"Dinheiro" }[a.tipo_pagamento] || "Não informado";
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
