@@ -12,7 +12,7 @@ async function salvarAluguel(){const e=document.getElementById("al-id").value,t=
 
 async function editarAluguel(e){try{const t=await api.get(`/api/alugueis/${e}`),[a,n,o]=await Promise.all([api.get("/api/clientes"),api.get("/api/reboques"),api.get("/api/alugueis")]),i=o.filter(t=>"ativo"===t.status&&t.id!==e).map(e=>e.reboque_id);document.getElementById("al-id").value=e,document.getElementById("modal-aluguel-titulo").textContent="Editar Aluguel",document.getElementById("al-cliente-sel").innerHTML='<option value="">Selecionar cliente...</option>'+a.map(e=>`<option value="${e.id}"${e.id===t.cliente_id?" selected":""}>${e.nome}</option>`).join("");const s=n.filter(e=>"manutencao"!==e.status&&(!i.includes(e.id)||e.id===t.reboque_id));document.getElementById("al-reboque-sel").innerHTML='<option value="">Selecionar reboque...</option>'+s.map(e=>`<option value="${e.id}"${e.id===t.reboque_id?" selected":""}>${e.nome} — ${fmt(e.diaria)}/dia</option>`).join(""),document.getElementById("al-reboque-sel").onchange=function(){const e=n.find(e=>e.id===this.value);e&&(document.getElementById("al-diaria").value=e.diaria),calcAluguel()},document.getElementById("al-saida").value=t.saida,document.getElementById("al-hora-saida").value=t.hora_saida||"08:00",document.getElementById("al-devolucao").value=t.devolucao,document.getElementById("al-hora-devolucao").value=t.hora_devolucao||"08:00",document.getElementById("al-diaria").value=t.diaria,document.getElementById("al-pagamento").value=t.pagamento,document.getElementById("al-tipo-pagamento").value=t.tipo_pagamento||"",document.getElementById("al-status").value=t.status,document.getElementById("al-obs").value=t.obs||"",document.getElementById("al-desconto").value=t.desconto||0,calcAluguel(),abrirModal("modal-aluguel")}catch(e){toast(e.message,"error")}}
 
-async function verAluguel(e){try{const t=await api.get(`/api/alugueis/${e}`),a=statusReal(t),n=diasEnteTotal(t.saida,t.devolucao);document.getElementById("detalhe-body").innerHTML=`\n      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">\n        <div>\n          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--blu);letter-spacing:1px">${t.cliente_nome||"—"}</div>\n          <div style="font-size:12px;color:var(--muted);margin-top:3px">${t.cliente_tel||""}</div>\n        </div>\n        <div style="display:flex;gap:6px">${badgeSt(a)} ${badgePag(t.pagamento)}</div>\n      </div>\n      <div style="background:var(--bg);padding:14px 16px;margin-bottom:16px;border-left:3px solid var(--org)">\n        <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--blu);text-transform:uppercase">${t.reboque_nome||"—"}</div>\n        <div style="font-size:12px;color:var(--muted);margin-top:2px">${t.reboque_tipo||""}${t.reboque_placa?" · "+t.reboque_placa:""}</div>\n      </div>\n      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">\n        ${[["Saída",fmtDate(t.saida)+(t.hora_saida?" "+t.hora_saida:"")],["Devolução",fmtDate(t.devolucao)+(t.hora_devolucao?" "+t.hora_devolucao:"")],["Período",n+" dia(s)"],["Diária",fmt(t.diaria)],...(t.tipo_pagamento?[["Forma de Pagamento",({pix_maquina:"PIX Máquina",pix_jonatas:"PIX Jonatas",cartao:"Cartão",dinheiro:"Dinheiro"})[t.tipo_pagamento]||t.tipo_pagamento]]:[])].map(([e,t])=>`\n          <div style="background:var(--bg);padding:12px 14px">\n            <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${e}</div>\n            <div style="font-weight:700;font-size:14px">${t}</div>\n          </div>`).join("")}\n      </div>\n      <div style="background:var(--blu);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">\n        <span style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase">Valor Total</span>\n        <span style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--org);letter-spacing:1px">${fmt(t.total)}</span>\n      </div>\n      ${t.obs?`<div style="background:var(--bg);padding:12px 14px"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Observações</div><div style="font-size:13px">${t.obs}</div></div>`:""}\n    `,document.getElementById("detalhe-ft").innerHTML=`\n      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>\n      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe');editarAluguel('${t.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>\n      ${"encerrado"!==a?`<button class="btn btn-grn" onclick="fecharModal('modal-detalhe');encerrarAluguel('${t.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>`:""}\n      <button class="btn btn-primary" onclick="imprimirContrato('${t.id}')"><svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Contrato</button>\n    `,abrirModal("modal-detalhe")}catch(e){toast(e.message,"error")}}
+async function verAluguel(e){try{const t=await api.get(`/api/alugueis/${e}`),a=statusReal(t),n=diasEnteTotal(t.saida,t.devolucao);document.getElementById("detalhe-body").innerHTML=`\n      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:10px">\n        <div>\n          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--blu);letter-spacing:1px">${t.cliente_nome||"—"}</div>\n          <div style="font-size:12px;color:var(--muted);margin-top:3px">${t.cliente_tel||""}</div>\n        </div>\n        <div style="display:flex;gap:6px">${badgeSt(a)} ${badgePag(t.pagamento)}</div>\n      </div>\n      <div style="background:var(--bg);padding:14px 16px;margin-bottom:16px;border-left:3px solid var(--org)">\n        <div style="font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;color:var(--blu);text-transform:uppercase">${t.reboque_nome||"—"}</div>\n        <div style="font-size:12px;color:var(--muted);margin-top:2px">${t.reboque_tipo||""}${t.reboque_placa?" · "+t.reboque_placa:""}</div>\n      </div>\n      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">\n        ${[["Saída",fmtDate(t.saida)+(t.hora_saida?" "+t.hora_saida:"")],["Devolução",fmtDate(t.devolucao)+(t.hora_devolucao?" "+t.hora_devolucao:"")],["Período",n+" dia(s)"],["Diária",fmt(t.diaria)],...(t.tipo_pagamento?[["Forma de Pagamento",({pix_maquina:"PIX Máquina",pix_jonatas:"PIX Jonatas",cartao:"Cartão",dinheiro:"Dinheiro"})[t.tipo_pagamento]||t.tipo_pagamento]]:[])].map(([e,t])=>`\n          <div style="background:var(--bg);padding:12px 14px">\n            <div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">${e}</div>\n            <div style="font-weight:700;font-size:14px">${t}</div>\n          </div>`).join("")}\n      </div>\n      <div style="background:var(--blu);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">\n        <span style="font-size:11px;color:rgba(255,255,255,.5);letter-spacing:2px;text-transform:uppercase">Valor Total</span>\n        <span style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--org);letter-spacing:1px">${fmt(t.total)}</span>\n      </div>\n      ${t.obs?`<div style="background:var(--bg);padding:12px 14px"><div style="font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Observações</div><div style="font-size:13px">${t.obs}</div></div>`:""}\n    `,document.getElementById("detalhe-ft").innerHTML=`\n      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe')">Fechar</button>\n      <button class="btn btn-ghost" onclick="fecharModal('modal-detalhe');editarAluguel('${t.id}')"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>\n      ${"encerrado"!==a?`<button class="btn btn-grn" onclick="fecharModal('modal-detalhe');encerrarAluguel('${t.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Encerrar</button>`:""}\n      <button class="btn btn-ghost" onclick="abrirEnviarDoc('${t.id}')"><svg viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>Enviar Doc</button>\n      <button class="btn btn-primary" onclick="imprimirContrato('${t.id}')"><svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Contrato</button>\n    `,abrirModal("modal-detalhe")}catch(e){toast(e.message,"error")}}
 
 async function encerrarAluguel(id){
   const a = _alCache.find(x=>x.id===id) || await api.get(`/api/alugueis/${id}`).catch(()=>null);
@@ -65,4 +65,60 @@ function buscarClientePorCPF(){
   const sel = document.getElementById('al-cliente-sel');
   sel.value = cliente.id;
   toast(`Cliente encontrado: ${cliente.nome}`,'success');
+}
+
+/* ═══ ENVIAR DOCUMENTO DO REBOQUE VIA WHATSAPP ═══ */
+
+async function abrirEnviarDoc(aluguelId){
+  try{
+    const a = _alCache.find(x=>x.id===aluguelId) || await api.get(`/api/alugueis/${aluguelId}`);
+    if(!a){ toast("Aluguel não encontrado","error"); return; }
+
+    document.getElementById("ed-reboque-nome").textContent     = a.reboque_nome || "—";
+    document.getElementById("ed-reboque-nome-raw").value       = a.reboque_nome || "";
+    document.getElementById("ed-cliente-tel").value            = a.cliente_tel || "";
+    document.getElementById("ed-cliente-nome").value           = a.cliente_nome || "";
+    document.getElementById("ed-cliente-nome-txt").textContent = a.cliente_nome || "";
+
+    const lista = document.getElementById("ed-lista");
+    lista.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Carregando documentos...</div>';
+    abrirModal("modal-enviar-doc");
+
+    const docs = await api.get(`/api/reboques/${a.reboque_id}/docs`);
+    if(!docs.length){
+      lista.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">Nenhum documento anexado a este reboque. Anexe em <strong>Reboques → Docs</strong>.</div>';
+      return;
+    }
+
+    if(!a.cliente_tel){
+      lista.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px 0">Este cliente não possui telefone cadastrado. Cadastre um telefone antes de enviar.</div>';
+      return;
+    }
+
+    lista.innerHTML = docs.map(d => `
+      <div class="doc-item">
+        <a class="doc-nome" href="/docs/${d.arquivo}" target="_blank" title="Abrir PDF">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          ${d.nome}
+        </a>
+        <button class="btn btn-grn btn-xs" onclick="enviarDocWhatsApp('${d.arquivo}','${(d.nome||'').replace(/'/g,"")}')">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+          WhatsApp
+        </button>
+      </div>`).join("");
+  }catch(e){ toast(e.message,"error"); }
+}
+
+function enviarDocWhatsApp(arquivo, nomeDoc){
+  const telRaw   = document.getElementById("ed-cliente-tel").value;
+  const clienteNome  = document.getElementById("ed-cliente-nome").value;
+  const reboqueNome  = document.getElementById("ed-reboque-nome-raw").value;
+
+  let digitos = telRaw.replace(/\D/g,"");
+  if(digitos.length <= 11) digitos = "55" + digitos; // adiciona código do Brasil se não presente
+
+  const link = window.location.origin + "/docs/" + arquivo;
+  const mensagem = `Olá ${clienteNome}! Segue o documento *${nomeDoc}* referente ao reboque *${reboqueNome}*:\n${link}`;
+
+  window.open(`https://wa.me/${digitos}?text=${encodeURIComponent(mensagem)}`, "_blank");
 }
