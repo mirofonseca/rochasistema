@@ -107,6 +107,78 @@ function gerarHtmlContrato(a, empresa){
     border-top: 1px solid #ddd;
     padding-top: 8px;
   }
+
+  .vistoria-page { page-break-before: always; padding-top: 10px; }
+  .vistoria-titulo {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .vistoria-nota {
+    font-size: 9.5pt;
+    color: #555;
+    text-align: center;
+    margin-bottom: 22px;
+  }
+  .vistoria-datas {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+  }
+  .vistoria-data-bloco {
+    flex: 1;
+    border: 1px solid #888;
+    padding: 10px 14px;
+  }
+  .vistoria-data-bloco .rot {
+    font-weight: bold;
+    font-size: 11pt;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .vistoria-data-bloco .campo {
+    font-size: 11pt;
+    margin-bottom: 4px;
+  }
+  .vistoria-ciente {
+    font-size: 11.5pt;
+    margin-bottom: 20px;
+  }
+  .vistoria-ciente .linha {
+    display: inline-block;
+    border-bottom: 1px solid #111;
+    min-width: 260px;
+    margin-left: 8px;
+  }
+  .vistoria-check-titulo {
+    font-weight: bold;
+    font-size: 11.5pt;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .vistoria-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 30px;
+  }
+  .vistoria-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5pt;
+    padding: 3px 0;
+  }
+  .vistoria-box {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid #111;
+    flex-shrink: 0;
+  }
   @media print {
     .no-print { display: none !important; }
     body { padding: 0; }
@@ -199,6 +271,42 @@ function gerarHtmlContrato(a, empresa){
   <p>E por estarem assim justas e contratadas, as partes firmam o presente instrumento, em duas vias de igual teor e forma.</p>
 
   <div class="local-data">Pelotas/RS, ${fmtDataExtensa(a.saida)}.</div>
+
+  <div class="vistoria-page">
+    <div class="vistoria-titulo">Termo de Vistoria de Retirada e Devolução</div>
+    <div class="vistoria-nota">Nota: 1. A Locação rege-se pelo previsto nos Arts. 1192, 1196, e do 1188 ao 1215, todos do Código Civil.</div>
+
+    <div class="vistoria-datas">
+      <div class="vistoria-data-bloco">
+        <div class="rot">Retirada (Vistoria)</div>
+        <div class="campo">Data: ____/____/______ às _____:_____ HS</div>
+      </div>
+      <div class="vistoria-data-bloco">
+        <div class="rot">Devolução (Vistoria)</div>
+        <div class="campo">Data: ____/____/______ às _____:_____ HS</div>
+      </div>
+    </div>
+
+    <div class="vistoria-ciente">Ciente Locatário: <span class="linha"></span></div>
+
+    <div class="vistoria-check-titulo">Itens Verificados</div>
+    <div class="vistoria-grid">
+      <div class="vistoria-item"><span class="vistoria-box"></span> Ligação elétrica</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Documento Renavan</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Estepe</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Chave de rodas</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Cadeado com chave</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Lanternas perfeitas</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Catraca / lona / corda</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Irá trafegar em estrada de terra</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Lataria perfeita</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Para-lama D — laterais madeira</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Limite de velocidade igual caminhão</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Para-lama E — laterais madeira</div>
+      <div class="vistoria-item"><span class="vistoria-box"></span> Corrente Ferro/mosquetão</div>
+    </div>
+  </div>
+
 
   <div class="assinaturas">
     <div class="assinatura-bloco">
