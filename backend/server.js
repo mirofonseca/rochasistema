@@ -339,7 +339,7 @@ app.get('/api/alugueis/:id', auth, (req, res) => {
 });
 
 app.post('/api/alugueis', auth, (req, res) => {
-  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, tipo_pagamento, status, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, tipo_pagamento, status, desconto, obs } = req.body;
   if (!cliente_id || !reboque_id || !saida || !devolucao)
     return res.status(400).json({ error: 'Campos obrigatórios: cliente_id, reboque_id, saida, devolucao' });
 
@@ -352,31 +352,36 @@ app.post('/api/alugueis', auth, (req, res) => {
   const conflito = checkConflitoReboque(reboque_id, saida, devolucao);
   if (conflito) return res.status(409).json({ error: conflito });
 
-  const id      = uid();
-  const hs      = hora_saida      || '00:00';
-  const hd      = hora_devolucao  || '00:00';
-  const stFinal = status || 'ativo';
-  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,tipo_pagamento,obs)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', stFinal, tipo_pagamento||null, obs||null]);
+  const id        = uid();
+  const hs        = hora_saida      || '00:00';
+  const hd        = hora_devolucao  || '00:00';
+  const stFinal   = status || 'ativo';
+  const descFinal = Number(desconto) || 0;
+  if (descFinal < 0) return res.status(400).json({ error: 'Desconto não pode ser negativo' });
+
+  run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,tipo_pagamento,desconto,obs)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    [id, cliente_id, reboque_id, saida, hs, devolucao, hd, diaria, total, pagamento||'pendente', stFinal, tipo_pagamento||null, descFinal, obs||null]);
 
   // Reboque fica indisponível (alugado) somente quando o status é Ativo.
   if (stFinal === 'ativo') run(`UPDATE reboques SET status='alugado' WHERE id=?`,[reboque_id]);
 
   auditoria('criar','Aluguel',`Aluguel criado — ${c.nome}`,
-    `Reboque: ${r.nome} · ${saida} ${hs} → ${devolucao} ${hd} · R$${total} · ${pagamento}`, req.user);
+    `Reboque: ${r.nome} · ${saida} ${hs} → ${devolucao} ${hd} · R$${total}${descFinal>0?` (desconto R$${descFinal})`:''} · ${pagamento}`, req.user);
   res.status(201).json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[id]));
 });
 
 app.put('/api/alugueis/:id', auth, (req, res) => {
   const a = get(`SELECT * FROM alugueis WHERE id=?`,[req.params.id]);
   if (!a) return res.status(404).json({ error: 'Aluguel não encontrado' });
-  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, tipo_pagamento, status, obs } = req.body;
+  const { cliente_id, reboque_id, saida, hora_saida, devolucao, hora_devolucao, diaria, total, pagamento, tipo_pagamento, status, desconto, obs } = req.body;
 
   const rbFinal = reboque_id || a.reboque_id;
   const stFinal = status || a.status;
   const saidaFinal = saida || a.saida;
   const devolucaoFinal = devolucao || a.devolucao;
+  const descFinal = desconto !== undefined ? (Number(desconto) || 0) : a.desconto;
+  if (descFinal < 0) return res.status(400).json({ error: 'Desconto não pode ser negativo' });
 
   // Só valida conflito se o aluguel continuar/ficar ativo (encerrado não ocupa data)
   if (stFinal === 'ativo') {
@@ -392,12 +397,12 @@ app.put('/api/alugueis/:id', auth, (req, res) => {
   // Sincroniza disponibilidade do reboque com o status final do aluguel.
   run(`UPDATE reboques SET status=? WHERE id=?`,[stFinal === 'ativo' ? 'alugado' : 'disponivel', rbFinal]);
 
-  run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,tipo_pagamento=?,obs=? WHERE id=?`,
+  run(`UPDATE alugueis SET cliente_id=?,reboque_id=?,saida=?,hora_saida=?,devolucao=?,hora_devolucao=?,diaria=?,total=?,pagamento=?,status=?,tipo_pagamento=?,desconto=?,obs=? WHERE id=?`,
     [cliente_id||a.cliente_id, rbFinal,
      saida||a.saida,           hora_saida||a.hora_saida||'00:00',
      devolucao||a.devolucao,   hora_devolucao||a.hora_devolucao||'00:00',
      diaria||a.diaria, total||a.total, pagamento||a.pagamento,
-     stFinal, tipo_pagamento??a.tipo_pagamento, obs??a.obs, req.params.id]);
+     stFinal, tipo_pagamento??a.tipo_pagamento, descFinal, obs??a.obs, req.params.id]);
 
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id||a.cliente_id]);
   auditoria('editar','Aluguel',`Aluguel editado — ${c?.nome}`,`Pag: ${pagamento} · Status: ${stFinal}`, req.user);
