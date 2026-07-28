@@ -15,7 +15,9 @@ function fmtDataExtensa(iso){
   return `${d} de ${meses[m-1]} de ${y}`;
 }
 
-function gerarHtmlContrato(a, empresa){
+function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
+  fotosRetirada  = fotosRetirada  || [];
+  fotosDevolucao = fotosDevolucao || [];
   const dias = diasEnteTotal(a.saida, a.devolucao);
   const hoje = new Date();
   const hojeFmt = hoje.toLocaleDateString("pt-BR");
@@ -179,6 +181,31 @@ function gerarHtmlContrato(a, empresa){
     border: 1.5px solid #111;
     flex-shrink: 0;
   }
+  .vistoria-fotos-titulo {
+    font-weight: bold;
+    font-size: 10.5pt;
+    text-transform: uppercase;
+    margin: 16px 0 8px;
+    color: #333;
+  }
+  .vistoria-fotos-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .vistoria-fotos-grid img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border: 1px solid #888;
+  }
+  .vistoria-fotos-vazio {
+    font-size: 9.5pt;
+    color: #999;
+    font-style: italic;
+    margin-bottom: 10px;
+  }
   @media print {
     .no-print { display: none !important; }
     body { padding: 0; }
@@ -305,6 +332,16 @@ function gerarHtmlContrato(a, empresa){
       <div class="vistoria-item"><span class="vistoria-box"></span> Para-lama E — laterais madeira</div>
       <div class="vistoria-item"><span class="vistoria-box"></span> Corrente Ferro/mosquetão</div>
     </div>
+
+    <div class="vistoria-fotos-titulo">Fotos — Retirada</div>
+    ${fotosRetirada.length
+      ? `<div class="vistoria-fotos-grid">${fotosRetirada.slice(0,4).map(f => `<img src="/fotos/${f.arquivo}" alt="Foto retirada">`).join("")}</div>`
+      : `<div class="vistoria-fotos-vazio">Nenhuma foto registrada na retirada.</div>`}
+
+    <div class="vistoria-fotos-titulo">Fotos — Devolução</div>
+    ${fotosDevolucao.length
+      ? `<div class="vistoria-fotos-grid">${fotosDevolucao.slice(0,4).map(f => `<img src="/fotos/${f.arquivo}" alt="Foto devolução">`).join("")}</div>`
+      : `<div class="vistoria-fotos-vazio">Nenhuma foto registrada na devolução.</div>`}
   </div>
 
 
@@ -332,12 +369,14 @@ function gerarHtmlContrato(a, empresa){
 
 async function imprimirContrato(aluguelId){
   try{
-    const [aluguel, empresa] = await Promise.all([
+    const [aluguel, empresa, fotosRetirada, fotosDevolucao] = await Promise.all([
       api.get(`/api/alugueis/${aluguelId}`),
       api.get('/api/config/empresa'),
+      api.get(`/api/alugueis/${aluguelId}/fotos-vistoria?tipo=retirada`).catch(()=>[]),
+      api.get(`/api/alugueis/${aluguelId}/fotos-vistoria?tipo=devolucao`).catch(()=>[]),
     ]);
 
-    const html = gerarHtmlContrato(aluguel, empresa);
+    const html = gerarHtmlContrato(aluguel, empresa, fotosRetirada, fotosDevolucao);
     const janela = window.open('', '_blank');
     if(!janela){
       toast('Não foi possível abrir a janela de impressão. Verifique se o bloqueador de pop-ups está ativo.','error');

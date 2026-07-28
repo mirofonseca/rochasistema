@@ -27,3 +27,20 @@
 .rel-legenda{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
 .rel-leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
 .rel-leg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* ── Fotos de Vistoria ─────────────────────────────────── */
+.fv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.fv-slot{aspect-ratio:1/1;border:2px dashed var(--brd);border-radius:4px;cursor:pointer;overflow:hidden;position:relative;transition:border-color .15s}
+.fv-slot:hover{border-color:var(--org)}
+.fv-slot.filled{border-style:solid;border-color:var(--grn)}
+.fv-slot-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:100%;color:var(--muted)}
+.fv-slot-empty svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.75}
+.fv-slot-empty span{font-size:10px;font-weight:700;letter-spacing:.5px}
+.fv-slot img{width:100%;height:100%;object-fit:cover;display:block}
+.fv-slot-remove{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(220,38,38,.9);border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:2}
+.fv-slot-remove svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.5}
+.fv-galeria-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.fv-galeria-item{position:relative;aspect-ratio:1/1;border-radius:4px;overflow:hidden;background:var(--bg)}
+.fv-galeria-item img{width:100%;height:100%;object-fit:cover;cursor:pointer}
+.fv-galeria-item .fv-del{position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(220,38,38,.9);border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer}
+.fv-galeria-item .fv-del svg{width:11px;height:11px;stroke:#fff;fill:none;stroke-width:2.5}

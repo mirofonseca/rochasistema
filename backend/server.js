@@ -38,6 +38,27 @@ const upload = multer({
   },
 });
 
+// ── Multer: upload de fotos de vistoria ─────────────────
+const FOTOS_DIR = path.join(DATA_DIR, 'fotos');
+if (!fs.existsSync(FOTOS_DIR)) fs.mkdirSync(FOTOS_DIR, { recursive: true });
+
+const fotoStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, FOTOS_DIR),
+  filename:    (req, file, cb) => {
+    const ext  = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const nome = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7) + ext;
+    cb(null, nome);
+  },
+});
+const uploadFoto = multer({
+  storage: fotoStorage,
+  limits:  { fileSize: 15 * 1024 * 1024 }, // 15 MB por foto
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) return cb(null, true);
+    cb(new Error('Apenas imagens são aceitas'));
+  },
+});
+
 // ── View engine (EJS) ──────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '..', 'views'));
@@ -50,6 +71,7 @@ app.use(express.urlencoded({ extended: true }));
 // ── Serve static files (CSS, JS, imagens) ──────────────
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
 app.use('/docs',   express.static(DOCS_DIR, { index: false })); // serve PDFs guardados
+app.use('/fotos',  express.static(FOTOS_DIR, { index: false })); // serve fotos de vistoria
 app.use(express.static(path.join(__dirname, '..'), { index: false }));
 
 // ── Página principal — renderizada via EJS partials ────
@@ -620,6 +642,49 @@ app.delete('/api/docs/:id', auth, (req, res) => {
   try { fs.unlinkSync(path.join(DOCS_DIR, doc.arquivo)); } catch(e) { /* arquivo já removido */ }
   run(`DELETE FROM documentos WHERE id=?`,[req.params.id]);
   auditoria('excluir','Documento',`PDF removido`,`Arquivo: ${doc.nome}`, req.user);
+  res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════
+// FOTOS DE VISTORIA (por aluguel — retirada / devolução)
+// ═══════════════════════════════════════════════════════
+app.get('/api/alugueis/:id/fotos-vistoria', auth, (req, res) => {
+  const tipo = req.query.tipo;
+  let sql = `SELECT * FROM fotos_vistoria WHERE aluguel_id=?`;
+  const p  = [req.params.id];
+  if (tipo) { sql += ` AND tipo=?`; p.push(tipo); }
+  sql += ` ORDER BY criado_em ASC`;
+  res.json(all(sql, p));
+});
+
+app.post('/api/alugueis/:id/fotos-vistoria', auth, uploadFoto.array('fotos', 4), (req, res) => {
+  const a = get(`SELECT id FROM alugueis WHERE id=?`,[req.params.id]);
+  if (!a) return res.status(404).json({ error: 'Aluguel não encontrado' });
+
+  const tipo = req.body.tipo === 'devolucao' ? 'devolucao' : 'retirada';
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'Nenhuma foto enviada' });
+
+  const jaExistentes = get(`SELECT COUNT(*) as n FROM fotos_vistoria WHERE aluguel_id=? AND tipo=?`,[req.params.id, tipo]).n;
+  if (jaExistentes + req.files.length > 4)
+    return res.status(400).json({ error: `Máximo de 4 fotos por vistoria (já existem ${jaExistentes})` });
+
+  const criadas = req.files.map(f => {
+    const id = uid();
+    run(`INSERT INTO fotos_vistoria (id,aluguel_id,tipo,arquivo,tamanho) VALUES (?,?,?,?,?)`,
+      [id, req.params.id, tipo, f.filename, f.size]);
+    return get(`SELECT * FROM fotos_vistoria WHERE id=?`,[id]);
+  });
+
+  auditoria('criar','Foto Vistoria',`${req.files.length} foto(s) de ${tipo} anexada(s)`,`Aluguel: ${req.params.id}`, req.user);
+  res.status(201).json(criadas);
+});
+
+app.delete('/api/fotos-vistoria/:id', auth, (req, res) => {
+  const foto = get(`SELECT * FROM fotos_vistoria WHERE id=?`,[req.params.id]);
+  if (!foto) return res.status(404).json({ error: 'Foto não encontrada' });
+  try { fs.unlinkSync(path.join(FOTOS_DIR, foto.arquivo)); } catch(e) { /* arquivo já removido */ }
+  run(`DELETE FROM fotos_vistoria WHERE id=?`,[req.params.id]);
+  auditoria('excluir','Foto Vistoria',`Foto removida`,`Tipo: ${foto.tipo}`, req.user);
   res.json({ ok: true });
 });
 

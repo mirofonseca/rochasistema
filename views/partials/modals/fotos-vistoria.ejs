@@ -1,0 +1,36 @@
+<div class="modal-overlay" id="modal-fotos-vistoria" onclick='fecharSeOverlay(event,"modal-fotos-vistoria")'><div class="modal" style="max-width:520px"><div class="modal-hd"><div class="modal-title">Fotos de Vistoria — <span id="fv-reboque-nome"></span></div><div class="modal-close" onclick='fecharModal("modal-fotos-vistoria")'><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div></div><div class="modal-body">
+<input type="hidden" id="fv-aluguel-id">
+
+<div style="display:flex;gap:6px;margin-bottom:16px">
+  <button id="fv-btn-retirada" class="btn btn-primary btn-xs" onclick="setTipoFotoVistoria('retirada')">Retirada</button>
+  <button id="fv-btn-devolucao" class="btn btn-ghost btn-xs" onclick="setTipoFotoVistoria('devolucao')">Devolução</button>
+</div>
+
+<p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tire até 4 fotos do reboque para registro da vistoria. Toque em um quadro para abrir a câmera.</p>
+
+<div class="fv-grid">
+  <div class="fv-slot" id="fv-slot-1" onclick="dispararCapturaFoto(1)">
+    <input type="file" accept="image/*" capture="environment" id="fv-input-1" style="display:none" onchange="capturarFotoVistoria(1,this)">
+    <div class="fv-slot-empty"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto 1</span></div>
+  </div>
+  <div class="fv-slot" id="fv-slot-2" onclick="dispararCapturaFoto(2)">
+    <input type="file" accept="image/*" capture="environment" id="fv-input-2" style="display:none" onchange="capturarFotoVistoria(2,this)">
+    <div class="fv-slot-empty"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto 2</span></div>
+  </div>
+  <div class="fv-slot" id="fv-slot-3" onclick="dispararCapturaFoto(3)">
+    <input type="file" accept="image/*" capture="environment" id="fv-input-3" style="display:none" onchange="capturarFotoVistoria(3,this)">
+    <div class="fv-slot-empty"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto 3</span></div>
+  </div>
+  <div class="fv-slot" id="fv-slot-4" onclick="dispararCapturaFoto(4)">
+    <input type="file" accept="image/*" capture="environment" id="fv-input-4" style="display:none" onchange="capturarFotoVistoria(4,this)">
+    <div class="fv-slot-empty"><svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg><span>Foto 4</span></div>
+  </div>
+</div>
+
+<div id="fv-upload-erro" style="color:var(--red);font-size:12px;margin-top:8px"></div>
+
+<div class="docs-sep"></div>
+<div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Fotos já salvas</div>
+<div id="fv-galeria"></div>
+
+</div><div class="modal-ft"><button class="btn btn-ghost" onclick='fecharModal("modal-fotos-vistoria")'>Fechar</button><button class="btn btn-primary" id="fv-btn-salvar" onclick="salvarFotosVistoria()" disabled>Salvar Fotos</button></div></div></div>
