@@ -31,49 +31,49 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
 <meta charset="UTF-8">
 <title>Contrato de Locação — ${a.cliente_nome} — Aluguel ${a.id}</title>
 <style>
-  @page { size: A4; margin: 2cm 2cm; }
+  @page { size: A4; margin: 1.3cm 1.5cm; }
   * { box-sizing: border-box; }
   body {
     font-family: 'Times New Roman', Georgia, serif;
     font-size: 9pt;
-    line-height: 1.55;
+    line-height: 1.32;
     color: #111;
     max-width: 820px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 12px;
   }
   h1 {
     text-align: center;
     font-size: 9pt;
     letter-spacing: 1px;
     text-transform: uppercase;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
   .subtitulo {
     text-align: center;
     font-size: 9pt;
     color: #555;
-    margin-bottom: 28px;
+    margin-bottom: 14px;
   }
   .clausula-titulo {
     font-weight: bold;
-    margin-top: 22px;
-    margin-bottom: 6px;
+    margin-top: 11px;
+    margin-bottom: 3px;
     text-transform: uppercase;
     font-size: 9pt;
   }
-  p { margin: 0 0 10px; text-align: justify; }
-  .qualificacao { margin-bottom: 6px; }
+  p { margin: 0 0 5px; text-align: justify; }
+  .qualificacao { margin-bottom: 3px; }
   .qualificacao strong { font-weight: bold; }
   table.dados {
     width: 100%;
     border-collapse: collapse;
-    margin: 14px 0;
+    margin: 7px 0;
     font-size: 9pt;
   }
   table.dados td {
     border: 1px solid #888;
-    padding: 6px 10px;
+    padding: 3px 8px;
   }
   table.dados td.label {
     background: #eee;
@@ -81,7 +81,7 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
     width: 38%;
   }
   .assinaturas {
-    margin-top: 60px;
+    margin-top: 30px;
     display: flex;
     justify-content: space-between;
     gap: 40px;
@@ -92,63 +92,64 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
   }
   .linha-assinatura {
     border-top: 1px solid #111;
-    margin-top: 50px;
-    padding-top: 6px;
+    margin-top: 25px;
+    padding-top: 4px;
     font-size: 9pt;
   }
   .local-data {
-    margin-top: 30px;
+    margin-top: 15px;
     text-align: right;
     font-size: 9pt;
   }
   .rodape-aviso {
-    margin-top: 40px;
+    margin-top: 18px;
     font-size: 9pt;
     color: #999;
     text-align: center;
     border-top: 1px solid #ddd;
-    padding-top: 8px;
+    padding-top: 5px;
   }
 
-  .vistoria-page { page-break-before: always; padding-top: 10px; }
+  .vistoria-page { padding-top: 12px; margin-top: 12px; border-top: 1px dashed #ccc; }
   .vistoria-titulo {
     text-align: center;
     font-size: 9pt;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
   .vistoria-nota {
     font-size: 9pt;
     color: #555;
     text-align: center;
-    margin-bottom: 22px;
+    margin-bottom: 10px;
   }
   .vistoria-datas {
     display: flex;
     justify-content: space-between;
     gap: 24px;
-    margin-bottom: 22px;
+    margin-bottom: 10px;
+    page-break-inside: avoid;
   }
   .vistoria-data-bloco {
     flex: 1;
     border: 1px solid #888;
-    padding: 10px 14px;
+    padding: 5px 10px;
   }
   .vistoria-data-bloco .rot {
     font-weight: bold;
     font-size: 9pt;
     text-transform: uppercase;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   .vistoria-data-bloco .campo {
     font-size: 9pt;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
   .vistoria-ciente {
     font-size: 9pt;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
   }
   .vistoria-ciente .linha {
     display: inline-block;
@@ -159,20 +160,20 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
   .vistoria-check-titulo {
     font-weight: bold;
     font-size: 9pt;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     text-transform: uppercase;
   }
   .vistoria-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px 30px;
+    gap: 2px 30px;
   }
   .vistoria-item {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 9pt;
-    padding: 3px 0;
+    padding: 1px 0;
   }
   .vistoria-box {
     display: inline-block;
@@ -185,14 +186,14 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
     font-weight: bold;
     font-size: 9pt;
     text-transform: uppercase;
-    margin: 16px 0 8px;
+    margin: 8px 0 4px;
     color: #333;
   }
   .vistoria-fotos-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
   }
   .vistoria-fotos-grid img {
     width: 100%;
@@ -204,7 +205,7 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
     font-size: 9pt;
     color: #999;
     font-style: italic;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
   }
   @media print {
     .no-print { display: none !important; }
