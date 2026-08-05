@@ -29,7 +29,7 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Contrato de Locação — ${a.cliente_nome} — Aluguel ${a.id}</title>
+<title>${a.status==="reservado"?"Pré-Contrato (Reserva)":"Contrato de Locação"} — ${a.cliente_nome} — ${a.id}</title>
 <style>
   @page { size: A4; margin: 1.3cm 1.5cm; }
   * { box-sizing: border-box; }
@@ -234,8 +234,9 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
 
   <div class="no-print"><button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button></div>
 
-  <h1>Contrato de Locação de Bem Móvel</h1>
-  <div class="subtitulo">Reboque / Trailer — Locação por Prazo Determinado</div>
+  ${a.status==="reservado"
+    ? `<h1>Pré-Contrato de Locação — Reserva</h1><div class="subtitulo">Reboque / Trailer — Reserva de Data (sujeita a confirmação na retirada)</div>`
+    : `<h1>Contrato de Locação de Bem Móvel</h1><div class="subtitulo">Reboque / Trailer — Locação por Prazo Determinado</div>`}
 
   <p class="qualificacao">
     <strong>LOCADOR:</strong> Rocha Reboques, CNPJ nº 60.117.050/0001-85, com endereço na Rua Bernardo José de Souza, 244, Bairro Fragata, Pelotas/RS, CEP 96040-230, neste ato representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, telefone (53) 9 9962-7279, doravante denominado simplesmente <strong>LOCADOR</strong>.

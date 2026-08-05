@@ -547,8 +547,12 @@ app.delete('/api/manutencoes/:id', auth, (req, res) => {
 // ═══════════════════════════════════════════════════════
 const RESERVA_SELECT = `
   SELECT res.*,
-    c.nome as cliente_nome, c.tel as cliente_tel,
-    r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo
+    c.nome as cliente_nome, c.tel as cliente_tel, c.cpf as cliente_cpf, c.rg as cliente_rg,
+    c.endereco as cliente_endereco, c.cidade as cliente_cidade,
+    c.cnh as cliente_cnh, c.cat_cnh as cliente_cat_cnh,
+    c.renavan as cliente_renavan, c.placa_veiculo as cliente_placa_veiculo,
+    r.nome as reboque_nome, r.placa as reboque_placa, r.tipo as reboque_tipo,
+    r.capacidade as reboque_capacidade, r.diaria as reboque_diaria
   FROM reservas res
   JOIN clientes c ON c.id = res.cliente_id
   JOIN reboques r ON r.id = res.reboque_id

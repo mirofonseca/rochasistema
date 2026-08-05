@@ -27,6 +27,7 @@ async function renderReservas(){
             <span class="badge" style="background:rgba(32,82,149,.12);color:var(--blu-l)"><span class="bd-dot" style="background:var(--blu-l)"></span>Reservado</span>
             <div class="al-btns">
               <button class="btn btn-grn btn-xs" onclick="iniciarAluguelDaReserva('${r.id}')"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg>Iniciar Aluguel</button>
+              <button class="btn btn-ghost btn-xs" onclick="imprimirContratoReserva('${r.id}')"><svg viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Contrato</button>
               <button class="btn btn-red btn-xs" onclick="cancelarReserva('${r.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>Cancelar</button>
             </div>
           </div>
@@ -129,4 +130,58 @@ async function salvarComoReserva(){
     if(currentPage === "reservas") renderReservas();
     else if(currentPage === "alugueis") renderAlugueis();
   }catch(e){ toast(e.message,"error"); }
+}
+
+/* ═══ IMPRIMIR CONTRATO (PRÉ-CONTRATO) A PARTIR DA RESERVA ═══ */
+
+async function imprimirContratoReserva(reservaId){
+  try{
+    const r = _resCache.find(x=>x.id===reservaId) || (await api.get('/api/reservas')).find(x=>x.id===reservaId);
+    if(!r){ toast('Reserva não encontrada','error'); return; }
+
+    const empresa = await api.get('/api/config/empresa');
+    const dias    = diasEnteTotal(r.data_inicio, r.data_fim);
+    const diaria  = Number(r.reboque_diaria) || 0;
+
+    // Monta um objeto no mesmo formato esperado pelo gerador de contrato (gerarHtmlContrato)
+    const aluguelLike = {
+      id:                   r.id,
+      cliente_nome:         r.cliente_nome,
+      cliente_tel:          r.cliente_tel,
+      cliente_cpf:          r.cliente_cpf,
+      cliente_rg:           r.cliente_rg,
+      cliente_cnh:          r.cliente_cnh,
+      cliente_cat_cnh:      r.cliente_cat_cnh,
+      cliente_endereco:     r.cliente_endereco,
+      cliente_cidade:       r.cliente_cidade,
+      cliente_renavan:      r.cliente_renavan,
+      cliente_placa_veiculo:r.cliente_placa_veiculo,
+      reboque_nome:         r.reboque_nome,
+      reboque_placa:        r.reboque_placa,
+      reboque_tipo:         r.reboque_tipo,
+      reboque_capacidade:   r.reboque_capacidade,
+      saida:                r.data_inicio,
+      hora_saida:           '08:00',
+      devolucao:            r.data_fim,
+      hora_devolucao:       '08:00',
+      diaria:               diaria,
+      total:                dias * diaria,
+      pagamento:            'pendente',
+      tipo_pagamento:       null,
+      status:               'reservado',
+      obs:                  r.obs,
+    };
+
+    const html = gerarHtmlContrato(aluguelLike, empresa, [], []);
+    const janela = window.open('', '_blank');
+    if(!janela){
+      toast('Não foi possível abrir a janela de impressão. Verifique se o bloqueador de pop-ups está ativo.','error');
+      return;
+    }
+    janela.document.open();
+    janela.document.write(html);
+    janela.document.close();
+  }catch(e){
+    toast(e.message || 'Erro ao gerar o pré-contrato','error');
+  }
 }
