@@ -584,6 +584,35 @@ app.post('/api/reservas', auth, (req, res) => {
   res.status(201).json(get(`${RESERVA_SELECT} WHERE res.id=?`,[id]));
 });
 
+app.put('/api/reservas/:id', auth, (req, res) => {
+  const resv = get(`SELECT * FROM reservas WHERE id=? AND status='ativa'`,[req.params.id]);
+  if (!resv) return res.status(404).json({ error: 'Reserva não encontrada ou já cancelada' });
+
+  const { reboque_id, cliente_id, data_inicio, data_fim, obs } = req.body;
+  const rbFinal   = reboque_id   || resv.reboque_id;
+  const cliFinal  = cliente_id   || resv.cliente_id;
+  const iniFinal  = data_inicio  || resv.data_inicio;
+  const fimFinal  = data_fim     || resv.data_fim;
+
+  if (new Date(fimFinal) < new Date(iniFinal))
+    return res.status(400).json({ error: 'Data final deve ser igual ou posterior à data inicial' });
+
+  const r = get(`SELECT nome FROM reboques WHERE id=?`,[rbFinal]);
+  if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
+  const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliFinal]);
+  if (!c) return res.status(404).json({ error: 'Cliente não encontrado' });
+
+  // Exclui a própria reserva da checagem de conflito
+  const conflito = checkConflitoReboque(rbFinal, iniFinal, fimFinal, null, req.params.id);
+  if (conflito) return res.status(409).json({ error: conflito });
+
+  run(`UPDATE reservas SET reboque_id=?,cliente_id=?,data_inicio=?,data_fim=?,obs=? WHERE id=?`,
+    [rbFinal, cliFinal, iniFinal, fimFinal, obs??resv.obs, req.params.id]);
+
+  auditoria('editar','Reserva',`Reserva editada — ${c.nome}`,`Reboque: ${r.nome} · ${iniFinal} → ${fimFinal}`, req.user);
+  res.json(get(`${RESERVA_SELECT} WHERE res.id=?`,[req.params.id]));
+});
+
 app.post('/api/reservas/:id/iniciar', auth, (req, res) => {
   const resv = get(`SELECT * FROM reservas WHERE id=? AND status='ativa'`,[req.params.id]);
   if (!resv) return res.status(404).json({ error: 'Reserva não encontrada ou já cancelada' });

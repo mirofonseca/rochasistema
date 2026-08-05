@@ -26,6 +26,7 @@ async function renderReservas(){
           <div class="al-right">
             <span class="badge" style="background:rgba(32,82,149,.12);color:var(--blu-l)"><span class="bd-dot" style="background:var(--blu-l)"></span>Reservado</span>
             <div class="al-btns">
+              <button class="btn btn-ghost btn-xs" onclick="abrirModalEditarReserva('${r.id}')"><svg viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
               <button class="btn btn-grn btn-xs" onclick="iniciarAluguelDaReserva('${r.id}')"><svg viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3"/></svg>Iniciar Aluguel</button>
               <button class="btn btn-ghost btn-xs" onclick="imprimirContratoReserva('${r.id}')"><svg viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir Contrato</button>
               <button class="btn btn-red btn-xs" onclick="cancelarReserva('${r.id}')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>Cancelar</button>
@@ -37,6 +38,9 @@ async function renderReservas(){
 }
 
 async function abrirModalReserva(reboqueId, reboqueNome){
+  document.getElementById("res-id").value           = "";
+  document.getElementById("res-modal-titulo").textContent = "Nova Reserva";
+  document.getElementById("res-btn-salvar").innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Reservar';
   document.getElementById("res-reboque-id").value   = reboqueId;
   document.getElementById("res-reboque-nome").value = reboqueNome;
   document.getElementById("res-cpf-busca").value    = "";
@@ -50,6 +54,29 @@ async function abrirModalReserva(reboqueId, reboqueNome){
     document.getElementById("res-cliente-sel").innerHTML =
       '<option value="">Selecionar cliente...</option>' +
       _clCache.map(c=>`<option value="${c.id}">${c.nome}</option>`).join("");
+  }catch(e){ toast(e.message,"error"); }
+}
+
+async function abrirModalEditarReserva(reservaId){
+  const r = _resCache.find(x=>x.id===reservaId);
+  if(!r){ toast("Reserva não encontrada","error"); return; }
+
+  document.getElementById("res-id").value            = r.id;
+  document.getElementById("res-modal-titulo").textContent = "Editar Reserva";
+  document.getElementById("res-btn-salvar").innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar Alterações';
+  document.getElementById("res-reboque-id").value    = r.reboque_id;
+  document.getElementById("res-reboque-nome").value  = r.reboque_nome;
+  document.getElementById("res-cpf-busca").value     = "";
+  document.getElementById("res-cliente-sel").innerHTML = '<option value="">Carregando...</option>';
+  document.getElementById("res-inicio").value = r.data_inicio;
+  document.getElementById("res-fim").value    = r.data_fim;
+  document.getElementById("res-obs").value    = r.obs || "";
+  abrirModal("modal-reserva");
+  try{
+    _clCache = await api.get("/api/clientes");
+    document.getElementById("res-cliente-sel").innerHTML =
+      '<option value="">Selecionar cliente...</option>' +
+      _clCache.map(c=>`<option value="${c.id}"${c.id===r.cliente_id?" selected":""}>${c.nome}</option>`).join("");
   }catch(e){ toast(e.message,"error"); }
 }
 
@@ -69,6 +96,7 @@ function buscarClienteParaReserva(){
 }
 
 async function salvarReserva(){
+  const id          = document.getElementById("res-id").value;
   const reboque_id  = document.getElementById("res-reboque-id").value;
   const cliente_id  = document.getElementById("res-cliente-sel").value;
   const data_inicio = document.getElementById("res-inicio").value;
@@ -80,8 +108,13 @@ async function salvarReserva(){
   if(new Date(data_fim) < new Date(data_inicio)){ toast("Data fim deve ser igual ou posterior à data início","error"); return; }
 
   try{
-    await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, obs });
-    toast("Reserva criada com sucesso!","success");
+    if(id){
+      await api.put(`/api/reservas/${id}`, { reboque_id, cliente_id, data_inicio, data_fim, obs });
+      toast("Reserva atualizada com sucesso!","success");
+    }else{
+      await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, obs });
+      toast("Reserva criada com sucesso!","success");
+    }
     fecharModal("modal-reserva");
     if(currentPage === "reservas") renderReservas();
   }catch(e){ toast(e.message,"error"); }
