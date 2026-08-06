@@ -20,6 +20,7 @@ async function renderReservas(){
             <div class="al-meta">
               <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> De: <strong>${fmtDate(r.data_inicio)}</strong></div>
               <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Até: <strong>${fmtDate(r.data_fim)}</strong></div>
+              <div class="al-meta-item"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Valor: <strong>${fmt(r.valor||0)}</strong></div>
             </div>
             ${r.obs?`<div class="al-sub" style="margin-top:6px;font-style:italic">${r.obs}</div>`:""}
           </div>
@@ -37,23 +38,39 @@ async function renderReservas(){
   }catch(e){ toast(e.message,"error"); }
 }
 
+/* Calcula o valor da reserva automaticamente (dias × diária do reboque).
+   O usuário pode editar o valor manualmente depois — só recalcula quando as datas mudam. */
+function calcValorReserva(){
+  const inicio = document.getElementById("res-inicio").value;
+  const fim    = document.getElementById("res-fim").value;
+  const diaria = Number(document.getElementById("res-diaria").value) || 0;
+  if(!inicio || !fim || diaria <= 0) return;
+  const dias = diasEnteTotal(inicio, fim);
+  document.getElementById("res-valor").value = (dias * diaria).toFixed(0);
+}
+
 async function abrirModalReserva(reboqueId, reboqueNome){
   document.getElementById("res-id").value           = "";
   document.getElementById("res-modal-titulo").textContent = "Nova Reserva";
   document.getElementById("res-btn-salvar").innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Reservar';
   document.getElementById("res-reboque-id").value   = reboqueId;
   document.getElementById("res-reboque-nome").value = reboqueNome;
+  document.getElementById("res-diaria").value       = "0";
   document.getElementById("res-cpf-busca").value    = "";
   document.getElementById("res-cliente-sel").innerHTML = '<option value="">Carregando...</option>';
   document.getElementById("res-inicio").value = "";
   document.getElementById("res-fim").value    = "";
+  document.getElementById("res-valor").value  = "0";
   document.getElementById("res-obs").value    = "";
   abrirModal("modal-reserva");
   try{
-    _clCache = await api.get("/api/clientes");
+    const [clientes, reboques] = await Promise.all([api.get("/api/clientes"), api.get("/api/reboques")]);
+    _clCache = clientes;
     document.getElementById("res-cliente-sel").innerHTML =
       '<option value="">Selecionar cliente...</option>' +
       _clCache.map(c=>`<option value="${c.id}">${c.nome}</option>`).join("");
+    const rb = reboques.find(x=>x.id===reboqueId);
+    if(rb) document.getElementById("res-diaria").value = rb.diaria;
   }catch(e){ toast(e.message,"error"); }
 }
 
@@ -66,17 +83,22 @@ async function abrirModalEditarReserva(reservaId){
   document.getElementById("res-btn-salvar").innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Salvar Alterações';
   document.getElementById("res-reboque-id").value    = r.reboque_id;
   document.getElementById("res-reboque-nome").value  = r.reboque_nome;
+  document.getElementById("res-diaria").value        = "0";
   document.getElementById("res-cpf-busca").value     = "";
   document.getElementById("res-cliente-sel").innerHTML = '<option value="">Carregando...</option>';
   document.getElementById("res-inicio").value = r.data_inicio;
   document.getElementById("res-fim").value    = r.data_fim;
+  document.getElementById("res-valor").value  = r.valor || 0;
   document.getElementById("res-obs").value    = r.obs || "";
   abrirModal("modal-reserva");
   try{
-    _clCache = await api.get("/api/clientes");
+    const [clientes, reboques] = await Promise.all([api.get("/api/clientes"), api.get("/api/reboques")]);
+    _clCache = clientes;
     document.getElementById("res-cliente-sel").innerHTML =
       '<option value="">Selecionar cliente...</option>' +
       _clCache.map(c=>`<option value="${c.id}"${c.id===r.cliente_id?" selected":""}>${c.nome}</option>`).join("");
+    const rb = reboques.find(x=>x.id===r.reboque_id);
+    if(rb) document.getElementById("res-diaria").value = rb.diaria;
   }catch(e){ toast(e.message,"error"); }
 }
 
@@ -101,18 +123,20 @@ async function salvarReserva(){
   const cliente_id  = document.getElementById("res-cliente-sel").value;
   const data_inicio = document.getElementById("res-inicio").value;
   const data_fim    = document.getElementById("res-fim").value;
+  const valor       = Number(document.getElementById("res-valor").value) || 0;
   const obs         = document.getElementById("res-obs").value;
 
   if(!cliente_id){ toast("Selecione um cliente","error"); return; }
   if(!data_inicio || !data_fim){ toast("Preencha as datas de início e fim","error"); return; }
   if(new Date(data_fim) < new Date(data_inicio)){ toast("Data fim deve ser igual ou posterior à data início","error"); return; }
+  if(valor < 0){ toast("Valor não pode ser negativo","error"); return; }
 
   try{
     if(id){
-      await api.put(`/api/reservas/${id}`, { reboque_id, cliente_id, data_inicio, data_fim, obs });
+      await api.put(`/api/reservas/${id}`, { reboque_id, cliente_id, data_inicio, data_fim, valor, obs });
       toast("Reserva atualizada com sucesso!","success");
     }else{
-      await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, obs });
+      await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, valor, obs });
       toast("Reserva criada com sucesso!","success");
     }
     fecharModal("modal-reserva");
@@ -198,7 +222,7 @@ async function imprimirContratoReserva(reservaId){
       devolucao:            r.data_fim,
       hora_devolucao:       '08:00',
       diaria:               diaria,
-      total:                dias * diaria,
+      total:                (r.valor && r.valor > 0) ? r.valor : dias * diaria,
       pagamento:            'pendente',
       tipo_pagamento:       null,
       status:               'reservado',

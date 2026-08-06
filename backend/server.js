@@ -563,13 +563,13 @@ app.get('/api/reservas', auth, (req, res) => {
 });
 
 app.post('/api/reservas', auth, (req, res) => {
-  const { reboque_id, cliente_id, data_inicio, data_fim, obs } = req.body;
+  const { reboque_id, cliente_id, data_inicio, data_fim, valor, obs } = req.body;
   if (!reboque_id || !cliente_id || !data_inicio || !data_fim)
     return res.status(400).json({ error: 'Campos obrigatórios: reboque_id, cliente_id, data_inicio, data_fim' });
   if (new Date(data_fim) < new Date(data_inicio))
     return res.status(400).json({ error: 'Data final deve ser igual ou posterior à data inicial' });
 
-  const r = get(`SELECT nome FROM reboques WHERE id=?`,[reboque_id]);
+  const r = get(`SELECT nome,diaria FROM reboques WHERE id=?`,[reboque_id]);
   if (!r) return res.status(404).json({ error: 'Reboque não encontrado' });
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[cliente_id]);
   if (!c) return res.status(404).json({ error: 'Cliente não encontrado' });
@@ -577,10 +577,18 @@ app.post('/api/reservas', auth, (req, res) => {
   const conflito = checkConflitoReboque(reboque_id, data_inicio, data_fim);
   if (conflito) return res.status(409).json({ error: conflito });
 
+  // Se não vier valor explícito, calcula automaticamente (dias × diária do reboque)
+  let valorFinal = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : null;
+  if (valorFinal === null || isNaN(valorFinal)) {
+    const dias = Math.max(1, Math.round((new Date(data_fim) - new Date(data_inicio)) / 86400000) || 1);
+    valorFinal = dias * r.diaria;
+  }
+  if (valorFinal < 0) return res.status(400).json({ error: 'Valor não pode ser negativo' });
+
   const id = uid();
-  run(`INSERT INTO reservas (id,reboque_id,cliente_id,data_inicio,data_fim,obs) VALUES (?,?,?,?,?,?)`,
-    [id, reboque_id, cliente_id, data_inicio, data_fim, obs||null]);
-  auditoria('criar','Reserva',`Reserva criada — ${c.nome}`,`Reboque: ${r.nome} · ${data_inicio} → ${data_fim}`, req.user);
+  run(`INSERT INTO reservas (id,reboque_id,cliente_id,data_inicio,data_fim,valor,obs) VALUES (?,?,?,?,?,?,?)`,
+    [id, reboque_id, cliente_id, data_inicio, data_fim, valorFinal, obs||null]);
+  auditoria('criar','Reserva',`Reserva criada — ${c.nome}`,`Reboque: ${r.nome} · ${data_inicio} → ${data_fim} · R$${valorFinal}`, req.user);
   res.status(201).json(get(`${RESERVA_SELECT} WHERE res.id=?`,[id]));
 });
 
@@ -588,11 +596,13 @@ app.put('/api/reservas/:id', auth, (req, res) => {
   const resv = get(`SELECT * FROM reservas WHERE id=? AND status='ativa'`,[req.params.id]);
   if (!resv) return res.status(404).json({ error: 'Reserva não encontrada ou já cancelada' });
 
-  const { reboque_id, cliente_id, data_inicio, data_fim, obs } = req.body;
+  const { reboque_id, cliente_id, data_inicio, data_fim, valor, obs } = req.body;
   const rbFinal   = reboque_id   || resv.reboque_id;
   const cliFinal  = cliente_id   || resv.cliente_id;
   const iniFinal  = data_inicio  || resv.data_inicio;
   const fimFinal  = data_fim     || resv.data_fim;
+  const valorFinal = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : resv.valor;
+  if (isNaN(valorFinal) || valorFinal < 0) return res.status(400).json({ error: 'Valor inválido' });
 
   if (new Date(fimFinal) < new Date(iniFinal))
     return res.status(400).json({ error: 'Data final deve ser igual ou posterior à data inicial' });
@@ -606,10 +616,10 @@ app.put('/api/reservas/:id', auth, (req, res) => {
   const conflito = checkConflitoReboque(rbFinal, iniFinal, fimFinal, null, req.params.id);
   if (conflito) return res.status(409).json({ error: conflito });
 
-  run(`UPDATE reservas SET reboque_id=?,cliente_id=?,data_inicio=?,data_fim=?,obs=? WHERE id=?`,
-    [rbFinal, cliFinal, iniFinal, fimFinal, obs??resv.obs, req.params.id]);
+  run(`UPDATE reservas SET reboque_id=?,cliente_id=?,data_inicio=?,data_fim=?,valor=?,obs=? WHERE id=?`,
+    [rbFinal, cliFinal, iniFinal, fimFinal, valorFinal, obs??resv.obs, req.params.id]);
 
-  auditoria('editar','Reserva',`Reserva editada — ${c.nome}`,`Reboque: ${r.nome} · ${iniFinal} → ${fimFinal}`, req.user);
+  auditoria('editar','Reserva',`Reserva editada — ${c.nome}`,`Reboque: ${r.nome} · ${iniFinal} → ${fimFinal} · R$${valorFinal}`, req.user);
   res.json(get(`${RESERVA_SELECT} WHERE res.id=?`,[req.params.id]));
 });
 
@@ -627,7 +637,8 @@ app.post('/api/reservas/:id/iniciar', auth, (req, res) => {
   const c = get(`SELECT nome FROM clientes WHERE id=?`,[resv.cliente_id]);
 
   const dias  = Math.max(1, Math.round((new Date(resv.data_fim) - new Date(resv.data_inicio)) / 86400000) || 1);
-  const total = dias * r.diaria;
+  // Usa o valor definido/editado na reserva; se não houver (reserva antiga), calcula automaticamente
+  const total = (resv.valor && resv.valor > 0) ? resv.valor : dias * r.diaria;
   const id    = uid();
 
   run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs)
@@ -636,7 +647,7 @@ app.post('/api/reservas/:id/iniciar', auth, (req, res) => {
   run(`UPDATE reboques SET status='alugado' WHERE id=?`,[resv.reboque_id]);
   run(`UPDATE reservas SET status='cancelada' WHERE id=?`,[req.params.id]);
 
-  auditoria('criar','Aluguel',`Aluguel iniciado a partir de reserva — ${c?.nome}`,`Reboque: ${r.nome} · ${resv.data_inicio} → ${resv.data_fim}`, req.user);
+  auditoria('criar','Aluguel',`Aluguel iniciado a partir de reserva — ${c?.nome}`,`Reboque: ${r.nome} · ${resv.data_inicio} → ${resv.data_fim} · R$${total}`, req.user);
   res.status(201).json(get(`${ALUGUEL_SELECT} WHERE a.id=?`,[id]));
 });
 
