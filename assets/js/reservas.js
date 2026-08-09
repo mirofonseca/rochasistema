@@ -225,7 +225,7 @@ async function imprimirContratoReserva(reservaId){
       total:                (r.valor && r.valor > 0) ? r.valor : dias * diaria,
       pagamento:            'pendente',
       tipo_pagamento:       null,
-      status:               'reservado',
+      status:               'ativo',
       obs:                  r.obs,
     };
 
