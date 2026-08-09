@@ -238,7 +238,7 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
   <div class="subtitulo">Reboque / Trailer — Locação por Prazo Determinado</div>
 
   <p class="qualificacao">
-    <strong>LOCADOR:</strong> Rocha Reboques, CNPJ nº 60.117.050/0001-85, com endereço na Rua Bernardo José de Souza, 244, Bairro Fragata, Pelotas/RS, CEP 96040-230, neste ato representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, telefone (53) 9 9962-7279, doravante denominado simplesmente <strong>LOCADOR</strong>.
+    <strong>LOCADOR:</strong> Rocha Reboques, CNPJ nº 60.117.050/0001-85, com endereço na Av. Bento Gonçalves, 5799, Pelotas/RS, CEP 96015-215, neste ato representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, telefone (53) 9 9962-7279, doravante denominado simplesmente <strong>LOCADOR</strong>.
   </p>
 
   <p class="qualificacao">
@@ -291,7 +291,7 @@ function gerarHtmlContrato(a, empresa, fotosRetirada, fotosDevolucao){
   <p>O presente contrato poderá ser rescindido antecipadamente por qualquer das partes, mediante comunicação prévia, hipótese em que será devida a parte proporcional do valor já utilizado, sem prejuízo de eventuais penalidades aplicáveis em caso de descumprimento contratual.</p>
 
   <div class="clausula-titulo">Cláusula 9ª — Da Identificação do Locador</div>
-  <p>O LOCADOR é a empresa Rocha Reboques, inscrita no CNPJ sob o nº 60.117.050/0001-85, com sede na Rua Bernardo José de Souza, nº 244, Bairro Fragata, na cidade de Pelotas, Estado do Rio Grande do Sul, CEP 96040-230, podendo o LOCADOR, neste ato e para todos os fins, ser representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, contato telefônico (53) 9 9962-7279.</p>
+  <p>O LOCADOR é a empresa Rocha Reboques, inscrita no CNPJ sob o nº 60.117.050/0001-85, com sede na Av. Bento Gonçalves, nº 5799, na cidade de Pelotas, Estado do Rio Grande do Sul, CEP 96015-215, podendo o LOCADOR, neste ato e para todos os fins, ser representado por Bruna Horner Floor de Oliveira, portadora do RG nº 2107078897, contato telefônico (53) 9 9962-7279.</p>
 
   <div class="clausula-titulo">Cláusula 10ª — Do Foro</div>
   <p>As partes eleger o foro da comarca de Pelotas/RS para dirimir quaisquer dúvidas ou litígios decorrentes do presente contrato, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
