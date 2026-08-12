@@ -18,8 +18,8 @@ async function renderReservas(){
             <div class="al-name">${r.cliente_nome}</div>
             <div class="al-sub">${r.reboque_nome}${r.reboque_placa?" · "+r.reboque_placa:""} · Tel: ${r.cliente_tel||"—"}</div>
             <div class="al-meta">
-              <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> De: <strong>${fmtDate(r.data_inicio)}</strong></div>
-              <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Até: <strong>${fmtDate(r.data_fim)}</strong></div>
+              <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> De: <strong>${fmtDate(r.data_inicio)} ${r.hora_inicio||""}</strong></div>
+              <div class="al-meta-item"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Até: <strong>${fmtDate(r.data_fim)} ${r.hora_fim||""}</strong></div>
               <div class="al-meta-item"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Valor: <strong>${fmt(r.valor||0)}</strong></div>
             </div>
             ${r.obs?`<div class="al-sub" style="margin-top:6px;font-style:italic">${r.obs}</div>`:""}
@@ -59,7 +59,9 @@ async function abrirModalReserva(reboqueId, reboqueNome){
   document.getElementById("res-cpf-busca").value    = "";
   document.getElementById("res-cliente-sel").innerHTML = '<option value="">Carregando...</option>';
   document.getElementById("res-inicio").value = "";
+  document.getElementById("res-hora-inicio").value = "08:00";
   document.getElementById("res-fim").value    = "";
+  document.getElementById("res-hora-fim").value = "08:00";
   document.getElementById("res-valor").value  = "0";
   document.getElementById("res-obs").value    = "";
   abrirModal("modal-reserva");
@@ -87,7 +89,9 @@ async function abrirModalEditarReserva(reservaId){
   document.getElementById("res-cpf-busca").value     = "";
   document.getElementById("res-cliente-sel").innerHTML = '<option value="">Carregando...</option>';
   document.getElementById("res-inicio").value = r.data_inicio;
+  document.getElementById("res-hora-inicio").value = r.hora_inicio || "08:00";
   document.getElementById("res-fim").value    = r.data_fim;
+  document.getElementById("res-hora-fim").value = r.hora_fim || "08:00";
   document.getElementById("res-valor").value  = r.valor || 0;
   document.getElementById("res-obs").value    = r.obs || "";
   abrirModal("modal-reserva");
@@ -122,7 +126,9 @@ async function salvarReserva(){
   const reboque_id  = document.getElementById("res-reboque-id").value;
   const cliente_id  = document.getElementById("res-cliente-sel").value;
   const data_inicio = document.getElementById("res-inicio").value;
+  const hora_inicio = document.getElementById("res-hora-inicio").value || "08:00";
   const data_fim    = document.getElementById("res-fim").value;
+  const hora_fim    = document.getElementById("res-hora-fim").value || "08:00";
   const valor       = Number(document.getElementById("res-valor").value) || 0;
   const obs         = document.getElementById("res-obs").value;
 
@@ -133,10 +139,10 @@ async function salvarReserva(){
 
   try{
     if(id){
-      await api.put(`/api/reservas/${id}`, { reboque_id, cliente_id, data_inicio, data_fim, valor, obs });
+      await api.put(`/api/reservas/${id}`, { reboque_id, cliente_id, data_inicio, hora_inicio, data_fim, hora_fim, valor, obs });
       toast("Reserva atualizada com sucesso!","success");
     }else{
-      await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, valor, obs });
+      await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, hora_inicio, data_fim, hora_fim, valor, obs });
       toast("Reserva criada com sucesso!","success");
     }
     fecharModal("modal-reserva");
@@ -172,7 +178,9 @@ async function salvarComoReserva(){
   const cliente_id  = document.getElementById("al-cliente-sel").value;
   const reboque_id  = document.getElementById("al-reboque-sel").value;
   const data_inicio = document.getElementById("al-saida").value;
+  const hora_inicio = document.getElementById("al-hora-saida").value || "08:00";
   const data_fim    = document.getElementById("al-devolucao").value;
+  const hora_fim    = document.getElementById("al-hora-devolucao").value || "08:00";
   const obs         = document.getElementById("al-obs").value;
 
   if(!cliente_id){ toast("Selecione um cliente","error"); return; }
@@ -181,7 +189,7 @@ async function salvarComoReserva(){
   if(new Date(data_fim) < new Date(data_inicio)){ toast("Data de devolução deve ser igual ou posterior à saída","error"); return; }
 
   try{
-    await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, data_fim, obs });
+    await api.post("/api/reservas", { reboque_id, cliente_id, data_inicio, hora_inicio, data_fim, hora_fim, obs });
     toast("Reserva criada com sucesso!","success");
     fecharModal("modal-aluguel");
     if(currentPage === "reservas") renderReservas();
@@ -218,9 +226,9 @@ async function imprimirContratoReserva(reservaId){
       reboque_tipo:         r.reboque_tipo,
       reboque_capacidade:   r.reboque_capacidade,
       saida:                r.data_inicio,
-      hora_saida:           '08:00',
+      hora_saida:           r.hora_inicio || '08:00',
       devolucao:            r.data_fim,
-      hora_devolucao:       '08:00',
+      hora_devolucao:       r.hora_fim || '08:00',
       diaria:               diaria,
       total:                (r.valor && r.valor > 0) ? r.valor : dias * diaria,
       pagamento:            'pendente',

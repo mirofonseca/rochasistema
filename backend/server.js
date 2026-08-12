@@ -563,7 +563,7 @@ app.get('/api/reservas', auth, (req, res) => {
 });
 
 app.post('/api/reservas', auth, (req, res) => {
-  const { reboque_id, cliente_id, data_inicio, data_fim, valor, obs } = req.body;
+  const { reboque_id, cliente_id, data_inicio, hora_inicio, data_fim, hora_fim, valor, obs } = req.body;
   if (!reboque_id || !cliente_id || !data_inicio || !data_fim)
     return res.status(400).json({ error: 'Campos obrigatórios: reboque_id, cliente_id, data_inicio, data_fim' });
   if (new Date(data_fim) < new Date(data_inicio))
@@ -586,8 +586,8 @@ app.post('/api/reservas', auth, (req, res) => {
   if (valorFinal < 0) return res.status(400).json({ error: 'Valor não pode ser negativo' });
 
   const id = uid();
-  run(`INSERT INTO reservas (id,reboque_id,cliente_id,data_inicio,data_fim,valor,obs) VALUES (?,?,?,?,?,?,?)`,
-    [id, reboque_id, cliente_id, data_inicio, data_fim, valorFinal, obs||null]);
+  run(`INSERT INTO reservas (id,reboque_id,cliente_id,data_inicio,hora_inicio,data_fim,hora_fim,valor,obs) VALUES (?,?,?,?,?,?,?,?,?)`,
+    [id, reboque_id, cliente_id, data_inicio, hora_inicio||'08:00', data_fim, hora_fim||'08:00', valorFinal, obs||null]);
   auditoria('criar','Reserva',`Reserva criada — ${c.nome}`,`Reboque: ${r.nome} · ${data_inicio} → ${data_fim} · R$${valorFinal}`, req.user);
   res.status(201).json(get(`${RESERVA_SELECT} WHERE res.id=?`,[id]));
 });
@@ -596,11 +596,13 @@ app.put('/api/reservas/:id', auth, (req, res) => {
   const resv = get(`SELECT * FROM reservas WHERE id=? AND status='ativa'`,[req.params.id]);
   if (!resv) return res.status(404).json({ error: 'Reserva não encontrada ou já cancelada' });
 
-  const { reboque_id, cliente_id, data_inicio, data_fim, valor, obs } = req.body;
+  const { reboque_id, cliente_id, data_inicio, hora_inicio, data_fim, hora_fim, valor, obs } = req.body;
   const rbFinal   = reboque_id   || resv.reboque_id;
   const cliFinal  = cliente_id   || resv.cliente_id;
   const iniFinal  = data_inicio  || resv.data_inicio;
   const fimFinal  = data_fim     || resv.data_fim;
+  const horaIniFinal = hora_inicio || resv.hora_inicio || '08:00';
+  const horaFimFinal = hora_fim    || resv.hora_fim    || '08:00';
   const valorFinal = valor !== undefined && valor !== null && valor !== '' ? Number(valor) : resv.valor;
   if (isNaN(valorFinal) || valorFinal < 0) return res.status(400).json({ error: 'Valor inválido' });
 
@@ -616,8 +618,8 @@ app.put('/api/reservas/:id', auth, (req, res) => {
   const conflito = checkConflitoReboque(rbFinal, iniFinal, fimFinal, null, req.params.id);
   if (conflito) return res.status(409).json({ error: conflito });
 
-  run(`UPDATE reservas SET reboque_id=?,cliente_id=?,data_inicio=?,data_fim=?,valor=?,obs=? WHERE id=?`,
-    [rbFinal, cliFinal, iniFinal, fimFinal, valorFinal, obs??resv.obs, req.params.id]);
+  run(`UPDATE reservas SET reboque_id=?,cliente_id=?,data_inicio=?,hora_inicio=?,data_fim=?,hora_fim=?,valor=?,obs=? WHERE id=?`,
+    [rbFinal, cliFinal, iniFinal, horaIniFinal, fimFinal, horaFimFinal, valorFinal, obs??resv.obs, req.params.id]);
 
   auditoria('editar','Reserva',`Reserva editada — ${c.nome}`,`Reboque: ${r.nome} · ${iniFinal} → ${fimFinal} · R$${valorFinal}`, req.user);
   res.json(get(`${RESERVA_SELECT} WHERE res.id=?`,[req.params.id]));
@@ -643,7 +645,7 @@ app.post('/api/reservas/:id/iniciar', auth, (req, res) => {
 
   run(`INSERT INTO alugueis (id,cliente_id,reboque_id,saida,hora_saida,devolucao,hora_devolucao,diaria,total,pagamento,status,obs)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    [id, resv.cliente_id, resv.reboque_id, resv.data_inicio, '08:00', resv.data_fim, '08:00', r.diaria, total, 'pendente', 'ativo', resv.obs||null]);
+    [id, resv.cliente_id, resv.reboque_id, resv.data_inicio, resv.hora_inicio||'08:00', resv.data_fim, resv.hora_fim||'08:00', r.diaria, total, 'pendente', 'ativo', resv.obs||null]);
   run(`UPDATE reboques SET status='alugado' WHERE id=?`,[resv.reboque_id]);
   run(`UPDATE reservas SET status='cancelada' WHERE id=?`,[req.params.id]);
 

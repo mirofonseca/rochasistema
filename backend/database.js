@@ -170,7 +170,9 @@ function createSchema() {
       reboque_id  TEXT NOT NULL REFERENCES reboques(id),
       cliente_id  TEXT NOT NULL REFERENCES clientes(id),
       data_inicio TEXT NOT NULL,
+      hora_inicio TEXT NOT NULL DEFAULT '08:00',
       data_fim    TEXT NOT NULL,
+      hora_fim    TEXT NOT NULL DEFAULT '08:00',
       valor       REAL NOT NULL DEFAULT 0,
       obs         TEXT,
       status      TEXT NOT NULL DEFAULT 'ativa'
@@ -243,6 +245,8 @@ function createSchema() {
     `ALTER TABLE alugueis ADD COLUMN valor_extra REAL DEFAULT 0`,
     `ALTER TABLE alugueis ADD COLUMN desconto REAL DEFAULT 0`,
     `ALTER TABLE reservas ADD COLUMN valor REAL DEFAULT 0`,
+    `ALTER TABLE reservas ADD COLUMN hora_inicio TEXT DEFAULT '08:00'`,
+    `ALTER TABLE reservas ADD COLUMN hora_fim TEXT DEFAULT '08:00'`,
   ].forEach(sql => { try { db.run(sql); } catch(e) {} });
 
   // Migração: permite status 'reservado' em bancos criados antes desta versão
